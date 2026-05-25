@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartCopy AI — Outreach OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#lg1)" stroke="url(#lg1)" stroke-width="1" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="lg1" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#818CF8"/>
+              <stop offset="1" stop-color="#C084FC"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">SmartCopy</span>
+        <span class="brand-tag">AI</span>
+      </div>
+    </div>
+
+    <!-- Tagline pill -->
+    <div class="brand-tagline">Outreach OS</div>
+
+    <!-- Nav -->
+    <nav class="nav">
+      <span class="nav-label">Workspace</span>
+      <ul class="nav-list">
+        <li class="nav-item active" onclick="window.location.href='/generate'" style="cursor:pointer;">
+          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/></svg>
+          Generate
+          <span class="nav-chip">Active</span>
+        </li>
+        <li class="nav-item" onclick="window.location.href='/dashboard'" style="cursor:pointer;">
+          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </li>
+        <li class="nav-item" onclick="window.location.href='/campaigns'" style="cursor:pointer;">
+          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Campaigns
+        </li>
+        <li class="nav-item" onclick="window.location.href='/analytics'" style="cursor:pointer;">
+          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Analytics
+        </li>
+      </ul>
+
+      <span class="nav-label" style="margin-top:8px;">Library</span>
+      <ul class="nav-list">
+        <li class="nav-item" onclick="window.location.href='/templates'" style="cursor:pointer;">
+          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Templates
+        </li>
+        <li class="nav-item" onclick="window.location.href='/history'" style="cursor:pointer;">
+          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+          History
+        </li>
+        <li class="nav-item" onclick="window.location.href='/settings'" style="cursor:pointer;">
+          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          Settings
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Upgrade card -->
+    <div class="upgrade-card">
+      <div class="upgrade-icon">⚡</div>
+      <p class="upgrade-title">Go Pro & Close More</p>
+      <p class="upgrade-body">Unlimited emails, deep AI research & team workspace. Pay for itself with one deal.</p>
+      <button class="upgrade-btn">Upgrade · $29/mo</button>
+    </div>
+
+    <!-- User -->
+    <div class="sidebar-user">
+      <div class="user-av">U</div>
+      <div class="user-meta">
+        <span class="user-name">Your Account</span>
+        <span class="user-plan">Free · 5 left today</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════════ MAIN ═══════════════════ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-status">
+          <span class="status-dot"></span>
+          AI Engine Active
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="tb-btn" id="clearBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          Reset
+        </button>
+        <button class="tb-btn tb-btn--accent" id="newBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Email
+        </button>
+      </div>
+    </header>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-eyebrow">
+          <span class="eyebrow-dot"></span>
+          Cold Email Generator · Used by 2,400+ freelancers
+        </div>
+        <h1 class="page-title">Generate emails that<br><span class="title-grad">land real deals</span></h1>
+        <p class="page-desc">Stop writing cold emails from scratch. Let AI craft personalised outreach that gets replies — in under 60 seconds.</p>
+      </div>
+      <div class="page-header-right">
+        <div class="hdr-stat">
+          <span class="hdr-stat-value" id="emailsToday">0</span>
+          <span class="hdr-stat-label">Generated today</span>
+        </div>
+        <div class="hdr-divider"></div>
+        <div class="hdr-stat">
+          <span class="hdr-stat-value">~45s</span>
+          <span class="hdr-stat-label">Avg. time saved</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Trust Strip ── -->
+    <div class="trust-strip">
+      <div class="trust-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Emails that sound human, not robotic</span>
+      </div>
+      <!-- <div class="trust-dot"></div>
+      <div class="trust-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Average 34% reply rate vs 8% industry average</span>
+      </div> -->
+      <div class="trust-dot"></div>
+      <div class="trust-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Used by freelancers, agencies & founders</span>
+      </div>
+      <div class="trust-dot"></div>
+      <div class="trust-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Ready in under 60 seconds</span>
+      </div>
+    </div>
+
+    <!-- ── Workspace ── -->
+    <div class="workspace">
+
+      <!-- ══ LEFT: Input Form ══ -->
+      <div class="form-col">
+
+        <!-- ─ Section 1: About You ─ -->
+        <div class="input-card" id="card-user">
+          <div class="card-header card-header--user">
+            <div class="card-header-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div>
+              <h2 class="card-title">About You</h2>
+              <p class="card-subtitle">Your professional identity</p>
+            </div>
+            <span class="card-step">Step 1</span>
+          </div>
+
+          <div class="card-body">
+
+            <!-- Row: Name + Company -->
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label" for="yourName">
+                  Your Name <span class="req">*</span>
+                </label>
+                <div class="input-wrap">
+                  <svg class="input-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <input class="field-input" type="text" id="yourName" placeholder="Alex Johnson" autocomplete="off" />
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="yourCompany">
+                  Company
+                  <span class="opt-badge">Optional</span>
+                </label>
+                <div class="input-wrap">
+                  <svg class="input-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                  <input class="field-input" type="text" id="yourCompany" placeholder="Acme Studio" autocomplete="off" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Service Offered -->
+            <div class="field">
+              <label class="field-label" for="serviceOffered">
+                Service / Skill Offered <span class="req">*</span>
+              </label>
+              <div class="input-wrap textarea-wrap">
+                <svg class="input-ico textarea-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/></svg>
+                <textarea class="field-input field-textarea" id="serviceOffered"
+                  placeholder="e.g. I help e-commerce brands grow revenue with performance-focused UI redesigns and conversion rate optimization..." maxlength="280"></textarea>
+              </div>
+              <div class="field-meta">
+                <span class="char-count"><span id="charNow">0</span>/280</span>
+              </div>
+            </div>
+
+            <!-- Row: Experience + Portfolio -->
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label">
+                  Experience Level
+                  <span class="opt-badge">Optional</span>
+                </label>
+                <div class="pill-row" id="expGroup">
+                  <button class="pill" data-val="Beginner">Beginner</button>
+                  <button class="pill" data-val="Intermediate">Mid-level</button>
+                  <button class="pill active" data-val="Expert">Expert</button>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="portfolio">
+                  Portfolio Link
+                  <span class="opt-badge">Optional</span>
+                </label>
+                <div class="input-wrap">
+                  <svg class="input-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                  <input class="field-input" type="url" id="portfolio" placeholder="https://yourportfolio.com" autocomplete="off" />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Section connector -->
+        <div class="section-connector">
+          <div class="connector-line"></div>
+          <div class="connector-node">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          </div>
+          <div class="connector-line"></div>
+        </div>
+
+        <!-- ─ Section 2: Your Target ─ -->
+        <div class="input-card" id="card-target">
+          <div class="card-header card-header--target">
+            <div class="card-header-icon card-header-icon--target">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            </div>
+            <div>
+              <h2 class="card-title">Your Target</h2>
+              <p class="card-subtitle">Who you're reaching out to</p>
+            </div>
+            <span class="card-step card-step--target">Step 2</span>
+          </div>
+
+          <div class="card-body">
+
+            <!-- Row: Prospect Name + Company -->
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label" for="prospectName">
+                  Prospect Name <span class="req">*</span>
+                </label>
+                <div class="input-wrap">
+                  <svg class="input-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <input class="field-input" type="text" id="prospectName" placeholder="Sarah Williams" autocomplete="off" />
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="prospectCompany">
+                  Company Name <span class="req">*</span>
+                </label>
+                <div class="input-wrap">
+                  <svg class="input-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                  <input class="field-input" type="text" id="prospectCompany" placeholder="TechCorp Ltd." autocomplete="off" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tone -->
+            <div class="field">
+              <label class="field-label">Tone</label>
+              <div class="pill-row" id="toneGroup">
+                <button class="pill active" data-val="Professional">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                  Professional
+                </button>
+                <button class="pill" data-val="Friendly">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                  Friendly
+                </button>
+                <button class="pill" data-val="Direct">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  Direct
+                </button>
+                <button class="pill" data-val="Casual">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                  Casual
+                </button>
+              </div>
+            </div>
+
+            <!-- Personalization Level -->
+            <div class="field">
+              <label class="field-label">Personalization Level</label>
+              <div class="personalization-track">
+                <button class="p-level active" data-val="Quick" id="pl-quick">
+                  <span class="p-level-name">Quick</span>
+                  <span class="p-level-desc">Fast generic email</span>
+                </button>
+                <button class="p-level" data-val="Standard" id="pl-standard">
+                  <span class="p-level-name">Standard</span>
+                  <span class="p-level-desc">Balanced personalization</span>
+                </button>
+                <button class="p-level" data-val="Deep" id="pl-deep">
+                  <span class="p-level-name">Deep ✦</span>
+                  <span class="p-level-desc">Hyper-personalized</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Goal -->
+            <div class="field">
+              <label class="field-label">Outreach Goal</label>
+              <div class="goal-grid" id="goalGroup">
+                <button class="goal-pill active" data-val="Book a Call">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.7A2 2 0 012.18 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.15a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15z"/></svg>
+                  Book a Call
+                </button>
+                <button class="goal-pill" data-val="Get a Reply">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  Get a Reply
+                </button>
+                <button class="goal-pill" data-val="Demo Request">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Demo Request
+                </button>
+                <button class="goal-pill" data-val="Share Resource">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  Share Resource
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button class="generate-btn" id="generateBtn">
+          <span id="btn-default">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/></svg>
+            Generate My Email — Land the Deal
+          </span>
+          <span id="btn-loading" class="hidden">
+            <span class="btn-spinner"></span>
+            Generating...
+          </span>
+        </button>
+
+        <!-- Error -->
+        <div class="form-error hidden" id="formError">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="errorMsg">Please fill in all required fields.</span>
+        </div>
+
+      </div>
+      <!-- /form-col -->
+
+      <!-- ══ RIGHT: Output Panel ══ -->
+      <div class="output-col">
+        <div class="output-card">
+
+          <!-- Output Header -->
+          <div class="output-header">
+            <div class="output-header-left">
+              <h2 class="output-title">Generated Email</h2>
+              <p class="output-subtitle" id="outputSubtitle">Your email will appear here</p>
+            </div>
+            <div class="output-header-right" id="outputActions" style="display:none;">
+              <button class="out-action" id="copyBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy
+              </button>
+              <button class="out-action" id="regenBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                Regen
+              </button>
+            </div>
+          </div>
+
+          <!-- Output Tabs -->
+          <div class="output-tabs" id="outputTabs" style="display:none;">
+            <button class="out-tab active" data-tab="cold">Cold Email</button>
+            <button class="out-tab" data-tab="followup">Follow-Up</button>
+            <button class="out-tab" data-tab="linkedin">LinkedIn DM</button>
+          </div>
+
+          <!-- Output Body -->
+          <div class="output-body">
+
+            <!-- Empty state -->
+            <div class="empty-state" id="emptyState">
+              <div class="empty-visual">
+                <div class="empty-rings">
+                  <div class="ring ring-1"></div>
+                  <div class="ring ring-2"></div>
+                  <div class="ring ring-3"></div>
+                </div>
+                <div class="empty-center-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+              </div>
+              <p class="empty-title">No email yet</p>
+              <p class="empty-desc">Complete the two steps on the left, then hit <strong>Generate Email</strong> to create your personalised cold outreach.</p>
+              <div class="empty-checklist">
+                <div class="check-item" id="chk-user">
+                  <div class="check-dot" id="dot-user"></div>
+                  <span>About You filled</span>
+                </div>
+                <div class="check-item" id="chk-target">
+                  <div class="check-dot" id="dot-target"></div>
+                  <span>Target details filled</span>
+                </div>
+                <div class="check-item">
+                  <div class="check-dot"></div>
+                  <span>Click Generate</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Thinking -->
+            <div class="ai-thinking hidden" id="aiThinking">
+              <div class="thinking-header">
+                <div class="thinking-pulse">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="thinking-label">AI working...</span>
+              </div>
+              <div class="thinking-steps">
+                <div class="thinking-step active" id="ts-1">
+                  <div class="ts-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <span>Reading your profile</span>
+                  <div class="ts-bar"><div class="ts-fill"></div></div>
+                </div>
+                <div class="thinking-step" id="ts-2">
+                  <div class="ts-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                  </div>
+                  <span>Analysing target</span>
+                  <div class="ts-bar"><div class="ts-fill"></div></div>
+                </div>
+                <div class="thinking-step" id="ts-3">
+                  <div class="ts-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/></svg>
+                  </div>
+                  <span>Generating email</span>
+                  <div class="ts-bar"><div class="ts-fill"></div></div>
+                </div>
+                <div class="thinking-step" id="ts-4">
+                  <div class="ts-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span>Humanising output</span>
+                  <div class="ts-bar"><div class="ts-fill"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Email result -->
+            <div class="email-result hidden" id="emailResult">
+
+              <!-- Score pills -->
+              <div class="score-row" id="scoreRow">
+                <div class="score-pill score-personalization">
+                  <span class="score-label">Personalization</span>
+                  <span class="score-val" id="scoreP">—</span>
+                </div>
+                <div class="score-pill score-spam">
+                  <span class="score-label">Spam Risk</span>
+                  <span class="score-val" id="scoreS">—</span>
+                </div>
+                <div class="score-pill score-reply">
+                  <span class="score-label">Reply Rate</span>
+                  <span class="score-val" id="scoreR">—</span>
+                </div>
+              </div>
+
+              <!-- Email content -->
+              <div class="email-subject-block">
+                <span class="email-field-lbl">Subject Line</span>
+                <p class="email-subject-text" id="emailSubject"></p>
+              </div>
+              <div class="email-sep"></div>
+              <div class="email-body-block">
+                <span class="email-field-lbl">Email Body</span>
+                <pre class="email-body-text" id="emailBody"></pre>
+              </div>
+
+              <!-- Copy toast -->
+              <div class="copy-toast hidden" id="copyToast">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Copied to clipboard!
+              </div>
+
+            </div>
+
+          </div>
+          <!-- /output-body -->
+
+        </div>
+        <!-- /output-card -->
+      </div>
+      <!-- /output-col -->
+
+    </div>
+    <!-- /workspace -->
+
+  </main>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
