@@ -1,426 +1,442 @@
-'use strict';
+// ─────────────────────────────────────────
+//  SmartCopy AI — main.js  (Phase 3)
+//  Matched to actual index.html structure
+// ─────────────────────────────────────────
 
-/* ── State ───────────────────────────────────────── */
-const S = {
-  tone:    'Professional',
-  goal:    'Book a Call',
-  exp:     'Expert',
-  persona: 'Quick',
-  emails:  0,
+const API_URL     = "/generate";
+const DAILY_LIMIT = 5;
+
+// ── Output state ───────────────────────────
+let currentOutput = {
+  cold_email:  { subject: "", body: "" },
+  follow_up:   { subject: "", body: "" },
+  linkedin_dm: { body: "" },
 };
+let activeTab = "cold";
 
-/* ── Helpers ─────────────────────────────────────── */
-const $ = id => document.getElementById(id);
-const show = el => el && el.classList.remove('hidden');
-const hide = el => el && el.classList.add('hidden');
+// ── DOM refs ───────────────────────────────
+// Inputs
+const yourName        = () => document.getElementById("yourName")?.value.trim()        || "";
+const yourCompany     = () => document.getElementById("yourCompany")?.value.trim()     || "";
+const serviceOffered  = () => document.getElementById("serviceOffered")?.value.trim()  || "";
+const portfolioInput  = () => document.getElementById("portfolio")?.value.trim()       || "";
+const prospectName    = () => document.getElementById("prospectName")?.value.trim()    || "";
+const prospectCompany = () => document.getElementById("prospectCompany")?.value.trim() || "";
 
-/* ── Pill Group ──────────────────────────────────── */
-function initPills(groupId, stateKey, selector = '.pill') {
-  const g = $(groupId);
-  if (!g) return;
-  g.addEventListener('click', e => {
-    const p = e.target.closest(selector);
-    if (!p) return;
-    g.querySelectorAll(selector).forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
-    S[stateKey] = p.dataset.val;
-    updateChecklist();
-  });
-}
+// Pill/selector helpers
+const getActivePill = (groupId) =>
+  document.querySelector(`#${groupId} .pill.active`)?.dataset.val || "";
+const getActivePersonalization = () =>
+  document.querySelector(".p-level.active")?.dataset.val || "Quick";
+const getActiveGoal = () =>
+  document.querySelector("#goalGroup .goal-pill.active")?.dataset.val || "Get a Reply";
 
-/* ── Personalization Track ───────────────────────── */
-function initPersonalization() {
-  document.querySelectorAll('.p-level').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.p-level').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      S.persona = btn.dataset.val;
-    });
-  });
-}
+// Output elements
+const generateBtn      = document.getElementById("generateBtn");
+const btnDefault       = document.getElementById("btn-default");
+const btnLoading       = document.getElementById("btn-loading");
+const formError        = document.getElementById("formError");
+const errorMsg         = document.getElementById("errorMsg");
 
-/* ── Live Checklist ──────────────────────────────── */
-function updateChecklist() {
-  const userFilled =
-    $('yourName').value.trim() &&
-    $('serviceOffered').value.trim();
+const emptyState       = document.getElementById("emptyState");
+const aiThinking       = document.getElementById("aiThinking");
+const emailResult      = document.getElementById("emailResult");
+const outputActions    = document.getElementById("outputActions");
+const outputTabs       = document.getElementById("outputTabs");
+const outputSubtitle   = document.getElementById("outputSubtitle");
 
-  const targetFilled =
-    $('prospectName').value.trim() &&
-    $('prospectCompany').value.trim();
+const emailSubject     = document.getElementById("emailSubject");
+const emailBody        = document.getElementById("emailBody");
+const subjectBlock     = document.querySelector(".email-subject-block");
+const emailSep         = document.querySelector(".email-sep");
 
-  const dotUser   = $('dot-user');
-  const dotTarget = $('dot-target');
+const scoreP           = document.getElementById("scoreP");
+const scoreS           = document.getElementById("scoreS");
+const scoreR           = document.getElementById("scoreR");
 
-  if (dotUser) {
-    dotUser.classList.toggle('done', !!userFilled);
-  }
-  if (dotTarget) {
-    dotTarget.classList.toggle('done', !!targetFilled);
-  }
-}
+const copyBtn          = document.getElementById("copyBtn");
+const regenBtn         = document.getElementById("regenBtn");
+const copyToast        = document.getElementById("copyToast");
 
-/* ── Char Counter ────────────────────────────────── */
-function initCharCounter() {
-  const ta = $('serviceOffered');
-  const ct = $('charNow');
-  if (!ta || !ct) return;
-  ta.addEventListener('input', () => {
-    const n = ta.value.length;
-    ct.textContent = n;
-    ct.style.color = n > 250 ? '#EF4444' : '';
-    updateChecklist();
-  });
-}
+const emailsToday      = document.getElementById("emailsToday");
 
-/* ── Output States ───────────────────────────────── */
-function setOutput(state) {
-  hide($('emptyState'));
-  hide($('aiThinking'));
-  hide($('emailResult'));
-  $('outputActions').style.display = 'none';
-  $('outputTabs').style.display   = 'none';
-
-  if (state === 'empty')   { show($('emptyState')); }
-  if (state === 'loading') { show($('aiThinking')); }
-  if (state === 'result') {
-    show($('emailResult'));
-    $('outputActions').style.display = 'flex';
-    $('outputTabs').style.display    = 'flex';
-  }
-}
-
-/* ── AI Thinking Animation ───────────────────────── */
-async function runThinkingAnimation() {
-  const steps = ['ts-1', 'ts-2', 'ts-3', 'ts-4'];
-  const delays = [0, 500, 1000, 1600];
-
-  // Reset all
-  steps.forEach(id => {
-    const el = $(id);
-    if (el) {
-      el.classList.remove('active', 'done');
-      const fill = el.querySelector('.ts-fill');
-      if (fill) fill.style.width = '0%';
-    }
-  });
-
-  // Animate each step
-  for (let i = 0; i < steps.length; i++) {
-    await new Promise(r => setTimeout(r, delays[i]));
-    const el = $(steps[i]);
-    if (!el) continue;
-
-    // Mark previous as done
-    if (i > 0) {
-      const prev = $(steps[i - 1]);
-      if (prev) prev.classList.replace('active', 'done');
-    }
-
-    el.classList.add('active');
-    const fill = el.querySelector('.ts-fill');
-    if (fill) {
-      requestAnimationFrame(() => { fill.style.width = '60%'; });
-    }
-  }
-}
-
-/* ── Generate button state ───────────────────────── */
-function setBtn(loading) {
-  const btn = $('generateBtn');
-  btn.disabled = loading;
-  $('btn-default').classList.toggle('hidden', loading);
-  $('btn-loading').classList.toggle('hidden', !loading);
-}
-
-/* ── Validation ──────────────────────────────────── */
-function getValues() {
-  return {
-    sender_name:      $('yourName').value.trim(),
-    sender_company:   $('yourCompany').value.trim(),
-    offering:         $('serviceOffered').value.trim(),
-    experience:       S.exp,
-    portfolio:        $('portfolio').value.trim(),
-    prospect_name:    $('prospectName').value.trim(),
-    prospect_company: $('prospectCompany').value.trim(),
-    tone:             S.tone,
-    personalization:  S.persona,
-    goal:             S.goal,
-  };
-}
-
-function validate(v) {
-  return v.sender_name && v.offering && v.prospect_name && v.prospect_company;
-}
-
-function showError(msg) {
-  const el = $('formError');
-  $('errorMsg').textContent = msg;
-  show(el);
-  setTimeout(() => hide(el), 4000);
-
-  // Highlight blank required fields
-  [
-    ['yourName', $('yourName').value.trim()],
-    ['serviceOffered', $('serviceOffered').value.trim()],
-    ['prospectName', $('prospectName').value.trim()],
-    ['prospectCompany', $('prospectCompany').value.trim()],
-  ].forEach(([id, val]) => {
-    if (!val) {
-      const inp = $(id);
-      inp.style.borderColor = '#EF4444';
-      inp.addEventListener('input', function fix() {
-        inp.style.borderColor = '';
-        inp.removeEventListener('input', fix);
-      });
-    }
-  });
-}
-
-/* ── Score generator (AI-simulated) ─────────────── */
-function getScores(persona) {
-  const map = {
-    Quick:    { p: '72%', s: 'Low',  r: '23%' },
-    Standard: { p: '85%', s: 'Safe', r: '34%' },
-    Deep:     { p: '96%', s: 'Safe', r: '48%' },
-  };
-  return map[persona] || map.Standard;
-}
-
-/* ── Render Email ────────────────────────────────── */
-function renderEmail(data) {
-  $('emailSubject').textContent = data.subject;
-  $('emailBody').textContent    = data.body;
-  $('outputSubtitle').textContent = `For ${data.prospect_name || 'your prospect'} · ${S.tone} · ${S.goal}`;
-
-  const sc = getScores(S.persona);
-  $('scoreP').textContent = sc.p;
-  $('scoreS').textContent = sc.s;
-  $('scoreR').textContent = sc.r;
-
-  hide($('copyToast'));
-}
-
-/* ── Update today counter ────────────────────────── */
-function bumpCounter() {
-  S.emails += 1;
-  const el = $('emailsToday');
-  if (el) el.textContent = S.emails;
-}
-
-/* ── Copy ────────────────────────────────────────── */
-function copyEmail() {
-  const sub  = $('emailSubject').textContent;
-  const body = $('emailBody').textContent;
-  const text = `Subject: ${sub}\n\n${body}`;
-
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = $('copyBtn');
-    const orig = btn.innerHTML;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
-    btn.style.color = '#10B981';
-    btn.style.borderColor = '#10B981';
-    show($('copyToast'));
-    setTimeout(() => {
-      btn.innerHTML = orig;
-      btn.style.color = '';
-      btn.style.borderColor = '';
-      hide($('copyToast'));
-    }, 2500);
-  }).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta);
-  });
-}
-
-/* ── API Call ────────────────────────────────────── */
-async function callGenerate(values) {
-  const res = await fetch('/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Server ${res.status}`);
-  }
-  return res.json();
-}
-
-/* ── Main Handler ────────────────────────────────── */
-async function handleGenerate() {
-  hide($('formError'));
-  const v = getValues();
-
-  if (!validate(v)) {
-    showError('Please fill in: Your Name, Service Offered, Prospect Name & Company.');
-    return;
-  }
-
-  setBtn(true);
-  setOutput('loading');
-
-  // Run animation + API call in parallel
-  const [data] = await Promise.all([
-    callGenerate(v).catch(err => {
-      setBtn(false);
-      setOutput('empty');
-      showError(`Generation failed: ${err.message}`);
-      return null;
-    }),
-    runThinkingAnimation(),
-    new Promise(r => setTimeout(r, 2200)),   // min animation time for good UX
-  ]);
-
-  if (!data) return;
-
-  if (data.success) {
-    // Mark last step done
-    const last = $('ts-4');
-    if (last) { last.classList.remove('active'); last.classList.add('done'); }
-    await new Promise(r => setTimeout(r, 300));
-
-    // Patch prospect_name into data so render can use it
-    data.prospect_name = v.prospect_name;
-
-    renderEmail(data);
-    setOutput('result');
-    bumpCounter();
-    saveToHistory(data, v);
-  } else {
-    setOutput('empty');
-    showError(data.error || 'Something went wrong. Try again.');
-  }
-
-  setBtn(false);
-}
-
-/* ── Regen ───────────────────────────────────────── */
-async function handleRegen() {
-  const v = getValues();
-  if (!validate(v)) return;
-
-  setOutput('loading');
-  $('regenBtn').disabled = true;
-
-  const [data] = await Promise.all([
-    callGenerate(v).catch(() => null),
-    runThinkingAnimation(),
-    new Promise(r => setTimeout(r, 2200)),
-  ]);
-
-  if (data && data.success) {
-    data.prospect_name = v.prospect_name;
-    renderEmail(data);
-    setOutput('result');
-    bumpCounter();
-    saveToHistory(data, v);
-  } else {
-    setOutput('result');
-  }
-  $('regenBtn').disabled = false;
-}
-
-/* ── Reset ───────────────────────────────────────── */
-function handleReset() {
-  ['yourName','yourCompany','serviceOffered','portfolio','prospectName','prospectCompany']
-    .forEach(id => { const el = $(id); if (el) el.value = ''; });
-
-  $('charNow').textContent = '0';
-
-  // Reset pill groups to defaults
-  document.querySelectorAll('#toneGroup .pill').forEach((p, i) => p.classList.toggle('active', i === 0));
-  document.querySelectorAll('#expGroup .pill').forEach((p, i) => p.classList.toggle('active', i === 2));
-  document.querySelectorAll('.p-level').forEach((p, i) => p.classList.toggle('active', i === 0));
-  document.querySelectorAll('#goalGroup .goal-pill').forEach((p, i) => p.classList.toggle('active', i === 0));
-
-  S.tone = 'Professional'; S.goal = 'Book a Call'; S.exp = 'Expert'; S.persona = 'Quick';
-
-  setOutput('empty');
-  updateChecklist();
-  $('yourName').focus();
-}
-
-/* ── Output Tabs (shell) ─────────────────────────── */
-function initOutputTabs() {
-  document.querySelectorAll('.out-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.out-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      // Phase 2: will swap content based on tab.dataset.tab
-    });
-  });
-}
-
-/* ── Live input listeners for checklist ─────────── */
-function initLiveChecklist() {
-  ['yourName', 'serviceOffered', 'prospectName', 'prospectCompany'].forEach(id => {
-    const el = $(id);
-    if (el) el.addEventListener('input', updateChecklist);
-  });
-}
-
-/* ── Enter key shortcut ──────────────────────────── */
-function initEnterKey() {
-  ['yourName','yourCompany','prospectName','prospectCompany','portfolio'].forEach(id => {
-    const el = $(id);
-    if (el) el.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); handleGenerate(); }
-    });
-  });
-}
-
-/* ── Nav active state ────────────────────────────── */
-function initNav() {
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      item.classList.add('active');
-    });
-  });
-}
-
-/* ── Boot ────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-  initPills('toneGroup', 'tone');
-  initPills('expGroup', 'exp');
-  initPills('goalGroup', 'goal', '.goal-pill');
-  initPersonalization();
-  initCharCounter();
-  initLiveChecklist();
-  initOutputTabs();
-  initEnterKey();
-  initNav();
-
-  $('generateBtn').addEventListener('click', handleGenerate);
-  $('copyBtn').addEventListener('click', copyEmail);
-  $('regenBtn').addEventListener('click', handleRegen);
-  $('clearBtn').addEventListener('click', handleReset);
-  $('newBtn').addEventListener('click', handleReset);
-
-  updateChecklist();
+// ── Init ───────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  setupExperiencePills();
+  setupTonePills();
+  setupPersonalizationTrack();
+  setupGoalPills();
+  setupTabs();
+  setupCharCounter();
+  setupLiveChecklist();
+  updateUsageDisplay();
+  setupGenerateBtn();
+  setupCopyBtn();
+  setupRegenBtn();
+  setupTopbarBtns();
 });
 
-/* ── Save to localStorage (feeds Dashboard) ──────── */
-function saveToHistory(data, values) {
-  try {
-    const history = JSON.parse(localStorage.getItem('smartcopy_history') || '[]');
-    history.push({
-      id:               Date.now(),
-      timestamp:        new Date().toISOString(),
-      subject:          data.subject,
-      body:             data.body,
-      tone:             values.tone,
-      goal:             values.goal,
-      personalization:  values.personalization,
-      prospect_name:    values.prospect_name,
-      prospect_company: values.prospect_company,
-      sender_name:      values.sender_name,
+// ── Pill groups ────────────────────────────
+function setupExperiencePills() {
+  document.querySelectorAll("#expGroup .pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      document.querySelectorAll("#expGroup .pill").forEach((p) => p.classList.remove("active"));
+      pill.classList.add("active");
     });
-    // Keep last 50 only
-    if (history.length > 50) history.splice(0, history.length - 50);
-    localStorage.setItem('smartcopy_history', JSON.stringify(history));
-  } catch { /* silent fail */ }
+  });
+}
+
+function setupTonePills() {
+  document.querySelectorAll("#toneGroup .pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      document.querySelectorAll("#toneGroup .pill").forEach((p) => p.classList.remove("active"));
+      pill.classList.add("active");
+    });
+  });
+}
+
+function setupPersonalizationTrack() {
+  document.querySelectorAll(".p-level").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".p-level").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+}
+
+function setupGoalPills() {
+  document.querySelectorAll("#goalGroup .goal-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      document.querySelectorAll("#goalGroup .goal-pill").forEach((p) => p.classList.remove("active"));
+      pill.classList.add("active");
+    });
+  });
+}
+
+// ── Output tabs ────────────────────────────
+function setupTabs() {
+  document.querySelectorAll(".out-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".out-tab").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeTab = btn.dataset.tab;
+      renderActiveTab();
+    });
+  });
+}
+
+function renderActiveTab() {
+  switch (activeTab) {
+    case "cold":
+      emailSubject.textContent = currentOutput.cold_email.subject;
+      emailBody.textContent    = currentOutput.cold_email.body;
+      showSubjectBlock(true);
+      outputSubtitle.textContent = "Cold outreach email";
+      break;
+    case "followup":
+      emailSubject.textContent = currentOutput.follow_up.subject;
+      emailBody.textContent    = currentOutput.follow_up.body;
+      showSubjectBlock(true);
+      outputSubtitle.textContent = "Follow-up email";
+      break;
+    case "linkedin":
+      emailSubject.textContent = "";
+      emailBody.textContent    = currentOutput.linkedin_dm.body;
+      showSubjectBlock(false);
+      outputSubtitle.textContent = "LinkedIn DM";
+      break;
+  }
+}
+
+function showSubjectBlock(show) {
+  if (subjectBlock) subjectBlock.style.display = show ? "" : "none";
+  if (emailSep)     emailSep.style.display     = show ? "" : "none";
+}
+
+// ── Char counter ───────────────────────────
+function setupCharCounter() {
+  const textarea = document.getElementById("serviceOffered");
+  const counter  = document.getElementById("charNow");
+  if (!textarea || !counter) return;
+
+  textarea.addEventListener("input", () => {
+    const len = textarea.value.length;
+    counter.textContent = len;
+    counter.style.color = len > 260 ? "#ef4444" : "";
+  });
+}
+
+// ── Live checklist in empty state ──────────
+function setupLiveChecklist() {
+  const nameInput    = document.getElementById("yourName");
+  const serviceInput = document.getElementById("serviceOffered");
+  const pNameInput   = document.getElementById("prospectName");
+  const pCompInput   = document.getElementById("prospectCompany");
+
+  const dotUser   = document.getElementById("dot-user");
+  const dotTarget = document.getElementById("dot-target");
+
+  function check() {
+    const userOk   = nameInput?.value.trim() && serviceInput?.value.trim();
+    const targetOk = pNameInput?.value.trim() && pCompInput?.value.trim();
+    if (dotUser)   dotUser.classList.toggle("done", !!userOk);
+    if (dotTarget) dotTarget.classList.toggle("done", !!targetOk);
+  }
+
+  [nameInput, serviceInput, pNameInput, pCompInput].forEach((el) => {
+    el?.addEventListener("input", check);
+  });
+}
+
+// ── Usage (localStorage) ───────────────────
+function getTodayKey() {
+  return `sc_usage_${new Date().toISOString().slice(0, 10)}`;
+}
+function getUsageToday() {
+  return parseInt(localStorage.getItem(getTodayKey()) || "0", 10);
+}
+function incrementUsage() {
+  const val = getUsageToday() + 1;
+  localStorage.setItem(getTodayKey(), val);
+  updateUsageDisplay();
+}
+function updateUsageDisplay() {
+  const used = getUsageToday();
+  if (emailsToday) emailsToday.textContent = used;
+
+  // Sidebar "5 left today"
+  const planEl = document.querySelector(".user-plan");
+  if (planEl) {
+    const left = Math.max(0, DAILY_LIMIT - used);
+    planEl.textContent = `Free · ${left} left today`;
+  }
+
+  if (used >= DAILY_LIMIT && generateBtn) {
+    generateBtn.disabled = true;
+    if (btnDefault) btnDefault.querySelector("span") || (btnDefault.textContent = "Daily limit reached — Upgrade to Pro");
+  }
+}
+
+// ── Thinking animation ─────────────────────
+function startThinking() {
+  emptyState?.classList.add("hidden");
+  emailResult?.classList.add("hidden");
+  aiThinking?.classList.remove("hidden");
+
+  const steps = document.querySelectorAll(".thinking-step");
+  steps.forEach((s) => s.classList.remove("active", "done"));
+
+  steps.forEach((step, i) => {
+    setTimeout(() => {
+      if (i > 0) steps[i - 1].classList.replace("active", "done");
+      step.classList.add("active");
+    }, i * 900);
+  });
+}
+
+function stopThinking() {
+  aiThinking?.classList.add("hidden");
+}
+
+// ── Error display ──────────────────────────
+function showError(msg) {
+  if (!formError || !errorMsg) return;
+  errorMsg.textContent = msg;
+  formError.classList.remove("hidden");
+  setTimeout(() => formError.classList.add("hidden"), 5000);
+}
+
+// ── Score pills ────────────────────────────
+function updateScores(personalization, tone, goal) {
+  const personMap = { Quick: "62%", Standard: "78%", Deep: "94%" };
+  const spamMap   = { Professional: "12%", Friendly: "9%", Direct: "15%", Casual: "8%" };
+  const replyMap  = { "Book a Call": "31%", "Get a Reply": "44%", "Demo Request": "28%", "Share Resource": "22%" };
+
+  if (scoreP) scoreP.textContent = personMap[personalization] || "78%";
+  if (scoreS) scoreS.textContent = spamMap[tone]              || "12%";
+  if (scoreR) scoreR.textContent = replyMap[goal]             || "35%";
+}
+
+// ── Collect form data ──────────────────────
+function collectFormData() {
+  return {
+    sender_name:      yourName(),
+    sender_company:   yourCompany(),
+    offering:         serviceOffered(),
+    experience:       getActivePill("expGroup") || "Expert",
+    portfolio:        portfolioInput(),
+    prospect_name:    prospectName(),
+    prospect_company: prospectCompany(),
+    tone:             getActivePill("toneGroup") || "Professional",
+    personalization:  getActivePersonalization(),
+    goal:             getActiveGoal(),
+  };
+}
+
+function validateForm(data) {
+  if (!data.sender_name)      return "Your Name is required.";
+  if (!data.offering)         return "Service / Skill is required.";
+  if (!data.prospect_name)    return "Prospect Name is required.";
+  if (!data.prospect_company) return "Prospect Company is required.";
+  return null;
+}
+
+// ── Save to localStorage (dashboard) ───────
+function saveToHistory(data, result) {
+  const history = JSON.parse(localStorage.getItem("sc_history") || "[]");
+  history.unshift({
+    id:              Date.now(),
+    date:            new Date().toISOString(),
+    prospect:        data.prospect_name,
+    company:         data.prospect_company,
+    tone:            data.tone,
+    goal:            data.goal,
+    personalization: data.personalization,
+    subject:         result.subject,
+    body:            result.body,
+  });
+  localStorage.setItem("sc_history", JSON.stringify(history.slice(0, 50)));
+}
+
+// ── Show result ────────────────────────────
+function showResult(data, result) {
+  currentOutput = {
+    cold_email:  { subject: result.subject,          body: result.body },
+    follow_up:   { subject: result.followup_subject, body: result.followup_body },
+    linkedin_dm: { body: result.linkedin_body },
+  };
+
+  // Reset to cold tab
+  activeTab = "cold";
+  document.querySelectorAll(".out-tab").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === "cold");
+  });
+
+  renderActiveTab();
+  updateScores(data.personalization, data.tone, data.goal);
+
+  // Show panels
+  emailResult?.classList.remove("hidden");
+  outputActions.style.display = "";
+  outputTabs.style.display    = "";
+
+  // Scroll output into view on mobile
+  emailResult?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// ── Generate button ────────────────────────
+function setupGenerateBtn() {
+  if (!generateBtn) return;
+
+  generateBtn.addEventListener("click", async () => {
+    if (getUsageToday() >= DAILY_LIMIT) {
+      showError("Daily limit reached. Upgrade to Pro for unlimited emails.");
+      return;
+    }
+
+    const data  = collectFormData();
+    const error = validateForm(data);
+    if (error) { showError(error); return; }
+
+    // Loading state
+    generateBtn.disabled = true;
+    btnDefault?.classList.add("hidden");
+    btnLoading?.classList.remove("hidden");
+    formError?.classList.add("hidden");
+
+    startThinking();
+
+    try {
+      const res    = await fetch(API_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(data),
+      });
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Generation failed. Please try again.");
+      }
+
+      stopThinking();
+      showResult(data, result);
+      incrementUsage();
+      saveToHistory(data, result);
+
+    } catch (err) {
+      stopThinking();
+      emptyState?.classList.remove("hidden");
+      showError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      generateBtn.disabled = getUsageToday() >= DAILY_LIMIT;
+      btnDefault?.classList.remove("hidden");
+      btnLoading?.classList.add("hidden");
+    }
+  });
+}
+
+// ── Copy button ────────────────────────────
+function setupCopyBtn() {
+  if (!copyBtn) return;
+
+  copyBtn.addEventListener("click", async () => {
+    let text = "";
+
+    if (activeTab === "linkedin") {
+      text = currentOutput.linkedin_dm.body;
+    } else {
+      const src = activeTab === "cold" ? currentOutput.cold_email : currentOutput.follow_up;
+      text = `Subject: ${src.subject}\n\n${src.body}`;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      // Show toast
+      copyToast?.classList.remove("hidden");
+      setTimeout(() => copyToast?.classList.add("hidden"), 2500);
+    } catch {
+      showError("Could not copy to clipboard.");
+    }
+  });
+}
+
+// ── Regen button ───────────────────────────
+function setupRegenBtn() {
+  if (!regenBtn) return;
+  regenBtn.addEventListener("click", () => generateBtn?.click());
+}
+
+// ── Topbar Reset + New Email buttons ───────
+function setupTopbarBtns() {
+  document.getElementById("clearBtn")?.addEventListener("click", () => {
+    document.getElementById("yourName").value        = "";
+    document.getElementById("yourCompany").value     = "";
+    document.getElementById("serviceOffered").value  = "";
+    document.getElementById("portfolio").value        = "";
+    document.getElementById("prospectName").value    = "";
+    document.getElementById("prospectCompany").value = "";
+    document.getElementById("charNow").textContent   = "0";
+
+    // Reset pills to defaults
+    document.querySelectorAll("#expGroup .pill").forEach((p) => p.classList.remove("active"));
+    document.querySelector("#expGroup .pill[data-val='Expert']")?.classList.add("active");
+    document.querySelectorAll("#toneGroup .pill").forEach((p) => p.classList.remove("active"));
+    document.querySelector("#toneGroup .pill[data-val='Professional']")?.classList.add("active");
+    document.querySelectorAll(".p-level").forEach((p) => p.classList.remove("active"));
+    document.querySelector(".p-level[data-val='Quick']")?.classList.add("active");
+    document.querySelectorAll("#goalGroup .goal-pill").forEach((p) => p.classList.remove("active"));
+    document.querySelector("#goalGroup .goal-pill[data-val='Book a Call']")?.classList.add("active");
+
+    // Reset output panel
+    emailResult?.classList.add("hidden");
+    emptyState?.classList.remove("hidden");
+    outputActions.style.display = "none";
+    outputTabs.style.display    = "none";
+    outputSubtitle.textContent  = "Your email will appear here";
+  });
+
+  document.getElementById("newBtn")?.addEventListener("click", () => {
+    document.getElementById("clearBtn")?.click();
+    document.getElementById("yourName")?.focus();
+  });
 }

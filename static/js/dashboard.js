@@ -42,7 +42,7 @@ function setDateAndGreeting() {
 /* ── Load History from localStorage ─────────────── */
 function loadHistory() {
   try {
-    return JSON.parse(localStorage.getItem('smartcopy_history') || '[]');
+    return JSON.parse(localStorage.getItem('sc_history') || '[]');
   } catch {
     return [];
   }
