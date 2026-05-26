@@ -1,12 +1,15 @@
 'use strict';
 
 /* ══════════════════════════════════════════════════════
-   SmartCopy AI — dashboard.js  (Phase 4)
+   SmartCopy AI — dashboard.js  (Phase 5)
+   All data from Supabase via /api/history + /api/usage
 ══════════════════════════════════════════════════════ */
 
 const $ = id => document.getElementById(id);
-
 const DAILY_LIMIT = 5;
+
+// Module-level history store — used by copyEmail()
+let cachedHistory = [];
 
 /* ── AI Tips ─────────────────────────────────────── */
 const AI_TIPS = [
@@ -37,60 +40,65 @@ function setDateAndGreeting() {
   if (td) td.textContent = dateStr;
 }
 
-/* ── Load History ────────────────────────────────── */
-function loadHistory() {
+/* ── Fetch history from server ───────────────────── */
+async function fetchHistory() {
   try {
-    return JSON.parse(localStorage.getItem('sc_history') || '[]');
+    const res  = await fetch('/api/history');
+    const data = await res.json();
+    return data.success ? (data.emails || []) : [];
   } catch {
     return [];
   }
 }
 
-/* ── Today's count (from history timestamps) ─────── */
-function getTodayCount(history) {
-  const today = new Date().toDateString();
-  return history.filter(e => {
-    const ts = e.timestamp || e.date; // support both old and new field name
-    return ts && new Date(ts).toDateString() === today;
-  }).length;
+/* ── Fetch usage from server ─────────────────────── */
+async function fetchUsage() {
+  try {
+    const res  = await fetch('/api/usage');
+    const data = await res.json();
+    return { usage: data.usage || 0, daily_limit: data.daily_limit || 5 };
+  } catch {
+    return { usage: 0, daily_limit: 5 };
+  }
 }
 
 /* ── Usage Bar & Sidebar ─────────────────────────── */
-function renderUsage(history) {
-  const todayCount = getTodayCount(history);
-  const usagePct   = Math.min((todayCount / DAILY_LIMIT) * 100, 100);
-  const remaining  = Math.max(0, DAILY_LIMIT - todayCount);
+function renderUsage(usage, limit) {
+  const usagePct  = Math.min((usage / limit) * 100, 100);
+  const remaining = Math.max(0, limit - usage);
 
-  // Usage bar card
   const uf = $('usageFill');
   const ut = $('usageText');
+
   if (uf) {
     setTimeout(() => { uf.style.width = usagePct + '%'; }, 300);
-    if (usagePct >= 100)     uf.style.background = 'linear-gradient(90deg,#EF4444,#F87171)';
-    else if (usagePct >= 60) uf.style.background = 'linear-gradient(90deg,#F59E0B,#FBBF24)';
+    if      (usagePct >= 100) uf.style.background = 'linear-gradient(90deg,#EF4444,#F87171)';
+    else if (usagePct >= 60)  uf.style.background = 'linear-gradient(90deg,#F59E0B,#FBBF24)';
   }
-  if (ut) ut.innerHTML = `<strong>${todayCount} / ${DAILY_LIMIT} emails used today</strong>`;
+  if (ut) ut.innerHTML = `<strong>${usage} / ${limit} emails used today</strong>`;
 
-  // Sidebar plan text
+  // Sidebar plan text — preserve plan name, update count
   const planEl = document.querySelector('.user-plan');
-  if (planEl) planEl.textContent = `Free · ${remaining} left today`;
+  if (planEl) {
+    const current = planEl.textContent;
+    const prefix  = current.includes('·') ? current.split('·')[0].trim() : 'Free';
+    planEl.textContent = `${prefix} · ${remaining} left today`;
+  }
 }
 
 /* ── Stats Cards ─────────────────────────────────── */
 function renderStats(history) {
   const total     = history.length;
-  const timeSaved = total * 8; // 8 min per email
+  const timeSaved = total * 8;
 
-  // Emails generated
   animateCount($('statEmailsTotal'), total);
 
-  // Time saved
   const el = $('statTimeSaved');
   if (el) el.textContent = timeSaved >= 60
     ? `${(timeSaved / 60).toFixed(1)}h`
     : `${timeSaved}m`;
 
-  // Reply rate — calculated from goal distribution
+  // Reply rate from goal distribution
   const replyRateEl = $('statReplyRate');
   if (replyRateEl) {
     if (!total) {
@@ -103,37 +111,36 @@ function renderStats(history) {
       replyRateEl.textContent = `${avg}%`;
     }
   }
-
-  renderUsage(history);
 }
 
 /* ── Week Stats ──────────────────────────────────── */
 function renderWeekStats(history) {
-  // Filter to this week
+  // Filter to this week only
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  weekStart.setHours(0,0,0,0);
+  weekStart.setHours(0, 0, 0, 0);
+
   const weekHistory = history.filter(e => {
-    const ts = e.timestamp || e.date;
+    const ts = e.created_at || e.timestamp;
     return ts && new Date(ts) >= weekStart;
   });
 
   const weekEmailsEl = $('weekEmails');
-  if (weekEmailsEl) weekEmailsEl.textContent = weekHistory.length || history.length;
+  if (weekEmailsEl) weekEmailsEl.textContent = weekHistory.length || 0;
 
   if (!history.length) return;
 
-  // Most used tone
+  // Most used tone (all time)
   const toneCount = {};
   history.forEach(e => { if (e.tone) toneCount[e.tone] = (toneCount[e.tone] || 0) + 1; });
-  const topTone = Object.entries(toneCount).sort((a,b) => b[1]-a[1])[0];
+  const topTone = Object.entries(toneCount).sort((a, b) => b[1] - a[1])[0];
   const wt = $('weekTone');
   if (wt && topTone) wt.textContent = topTone[0];
 
   // Top goal
   const goalCount = {};
   history.forEach(e => { if (e.goal) goalCount[e.goal] = (goalCount[e.goal] || 0) + 1; });
-  const topGoal = Object.entries(goalCount).sort((a,b) => b[1]-a[1])[0];
+  const topGoal = Object.entries(goalCount).sort((a, b) => b[1] - a[1])[0];
   const wg = $('weekGoal');
   if (wg && topGoal) wg.textContent = topGoal[0];
 
@@ -191,14 +198,13 @@ function renderActivity(history) {
   emptyEl.style.display = 'none';
   itemsEl.classList.remove('hidden');
 
-  const recent = [...history].slice(0, 6); // already newest-first from unshift
+  // Supabase returns newest first already — no reverse needed
+  const recent = history.slice(0, 6);
 
   itemsEl.innerHTML = recent.map(email => {
-    // Support both old field names (prospect/company) and new (prospect_name/prospect_company)
-    const name    = email.prospect_name    || email.prospect    || '';
-    const company = email.prospect_company || email.company     || '';
-    const ts      = email.timestamp        || email.date        || null;
-
+    const name        = email.prospect_name    || '';
+    const company     = email.prospect_company || '';
+    const ts          = email.created_at       || null;
     const initials    = getInitials(name, company);
     const avatarColor = getAvatarColor(company || name);
     const timeAgo     = formatTimeAgo(ts);
@@ -236,8 +242,8 @@ function renderActivity(history) {
 
 /* ── Activity Actions ────────────────────────────── */
 window.copyEmail = function(id) {
-  const history = loadHistory();
-  const email   = history.find(e => e.id === id);
+  // Use cachedHistory — no localStorage needed
+  const email = cachedHistory.find(e => e.id === id);
   if (!email) return;
   const text = `Subject: ${email.subject}\n\n${email.body}`;
   navigator.clipboard.writeText(text).then(() => {
@@ -260,12 +266,11 @@ function showToast(msg) {
       position:fixed; bottom:24px; right:24px; z-index:9999;
       background:#10B981; color:white; padding:10px 18px;
       border-radius:8px; font-size:13px; font-family:Outfit,sans-serif;
-      box-shadow:0 4px 12px rgba(0,0,0,0.15);
-      transition: opacity 0.3s;
+      box-shadow:0 4px 12px rgba(0,0,0,0.15); transition:opacity 0.3s;
     `;
     document.body.appendChild(toast);
   }
-  toast.textContent = msg;
+  toast.textContent  = msg;
   toast.style.opacity = '1';
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
@@ -311,7 +316,7 @@ function getInitials(name, company) {
   if (name && name.trim()) {
     const parts = name.trim().split(' ');
     return parts.length >= 2
-      ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
       : parts[0].slice(0, 2).toUpperCase();
   }
   return company ? company.slice(0, 2).toUpperCase() : 'SC';
@@ -325,9 +330,10 @@ const AVATAR_COLORS = [
   'linear-gradient(135deg,#EF4444,#F87171)',
   'linear-gradient(135deg,#8B5CF6,#C084FC)',
 ];
+
 function getAvatarColor(str) {
   let hash = 0;
-  for (let i = 0; i < (str||'').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
@@ -354,13 +360,19 @@ function escHtml(str) {
 }
 
 /* ── Boot ────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   setDateAndGreeting();
   initTips();
 
-  const history = loadHistory();
+  // Fetch both in parallel
+  const [history, usageData] = await Promise.all([fetchHistory(), fetchUsage()]);
+
+  // Cache history for copyEmail
+  cachedHistory = history;
+
   renderStats(history);
   renderWeekStats(history);
   renderToneBars(history);
   renderActivity(history);
+  renderUsage(usageData.usage, usageData.daily_limit);
 });
