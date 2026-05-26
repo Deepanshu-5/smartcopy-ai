@@ -1,26 +1,24 @@
 'use strict';
 
 /* ══════════════════════════════════════════════════════
-   SmartCopy AI — dashboard.js
-   Reads session/localStorage data from generate page,
-   renders real stats, activity feed, tone breakdown
+   SmartCopy AI — dashboard.js  (Phase 4)
 ══════════════════════════════════════════════════════ */
 
-/* ── Helpers ─────────────────────────────────────── */
 const $ = id => document.getElementById(id);
 
-/* ── AI Tips Pool ────────────────────────────────── */
+const DAILY_LIMIT = 5;
+
+/* ── AI Tips ─────────────────────────────────────── */
 const AI_TIPS = [
   `Use the <strong>Deep</strong> personalization level when targeting decision-makers — it increases reply rates by up to 40% compared to Quick mode.`,
   `<strong>Tuesday and Thursday mornings</strong> (9–11am local time) have the highest cold email open rates across industries.`,
   `Keep your subject line under <strong>7 words</strong>. Short subject lines get 21% higher open rates than longer ones.`,
   `The <strong>Friendly</strong> tone performs best for creative agencies and startups. <strong>Professional</strong> wins for enterprise and finance.`,
   `Always lead with <strong>their problem</strong>, not your solution. Emails that open with the prospect's pain point get 3x more replies.`,
-  `<strong>One clear CTA</strong> per email. Giving two options (call or reply?) reduces response rates by 31%.`,
+  `<strong>One clear CTA</strong> per email. Giving two options reduces response rates by 31%.`,
   `Mention their <strong>company name</strong> in the first sentence. Personalized openers increase reply rates by 26%.`,
   `Follow-up emails get <strong>40% of all replies</strong>. Never send just one email — always plan a follow-up 3–5 days later.`,
 ];
-
 let currentTipIndex = 0;
 
 /* ── Date & Greeting ─────────────────────────────── */
@@ -39,7 +37,7 @@ function setDateAndGreeting() {
   if (td) td.textContent = dateStr;
 }
 
-/* ── Load History from localStorage ─────────────── */
+/* ── Load History ────────────────────────────────── */
 function loadHistory() {
   try {
     return JSON.parse(localStorage.getItem('sc_history') || '[]');
@@ -48,72 +46,103 @@ function loadHistory() {
   }
 }
 
-/* ── Stats ───────────────────────────────────────── */
-function renderStats(history) {
-  const total = history.length;
-  const timeSaved = total * 8;
+/* ── Today's count (from history timestamps) ─────── */
+function getTodayCount(history) {
+  const today = new Date().toDateString();
+  return history.filter(e => {
+    const ts = e.timestamp || e.date; // support both old and new field name
+    return ts && new Date(ts).toDateString() === today;
+  }).length;
+}
 
-  // Total emails
+/* ── Usage Bar & Sidebar ─────────────────────────── */
+function renderUsage(history) {
+  const todayCount = getTodayCount(history);
+  const usagePct   = Math.min((todayCount / DAILY_LIMIT) * 100, 100);
+  const remaining  = Math.max(0, DAILY_LIMIT - todayCount);
+
+  // Usage bar card
+  const uf = $('usageFill');
+  const ut = $('usageText');
+  if (uf) {
+    setTimeout(() => { uf.style.width = usagePct + '%'; }, 300);
+    if (usagePct >= 100)     uf.style.background = 'linear-gradient(90deg,#EF4444,#F87171)';
+    else if (usagePct >= 60) uf.style.background = 'linear-gradient(90deg,#F59E0B,#FBBF24)';
+  }
+  if (ut) ut.innerHTML = `<strong>${todayCount} / ${DAILY_LIMIT} emails used today</strong>`;
+
+  // Sidebar plan text
+  const planEl = document.querySelector('.user-plan');
+  if (planEl) planEl.textContent = `Free · ${remaining} left today`;
+}
+
+/* ── Stats Cards ─────────────────────────────────── */
+function renderStats(history) {
+  const total     = history.length;
+  const timeSaved = total * 8; // 8 min per email
+
+  // Emails generated
   animateCount($('statEmailsTotal'), total);
-  animateCount($('weekEmails'), total);
 
   // Time saved
   const el = $('statTimeSaved');
-  if (el) el.textContent = timeSaved >= 60 ? `${(timeSaved / 60).toFixed(1)}h` : `${timeSaved}m`;
+  if (el) el.textContent = timeSaved >= 60
+    ? `${(timeSaved / 60).toFixed(1)}h`
+    : `${timeSaved}m`;
 
-  // Usage bar (free = 5/day)
-  const todayCount = getTodayCount(history);
-  const usagePct   = Math.min((todayCount / 5) * 100, 100);
-  const uf = $('usageFill');
-  const ut = $('usageText');
-  if (uf) setTimeout(() => { uf.style.width = usagePct + '%'; }, 300);
-  if (ut) ut.innerHTML = `<strong>${todayCount} / 5 emails used today</strong>`;
-
-  // Change bar color based on usage
-  if (uf) {
-    if (usagePct >= 100) uf.style.background = 'linear-gradient(90deg,#EF4444,#F87171)';
-    else if (usagePct >= 60) uf.style.background = 'linear-gradient(90deg,#F59E0B,#FBBF24)';
+  // Reply rate — calculated from goal distribution
+  const replyRateEl = $('statReplyRate');
+  if (replyRateEl) {
+    if (!total) {
+      replyRateEl.textContent = '—';
+    } else {
+      const goalRates = { 'Get a Reply': 44, 'Book a Call': 31, 'Demo Request': 28, 'Share Resource': 22 };
+      const avg = Math.round(
+        history.reduce((sum, e) => sum + (goalRates[e.goal] || 30), 0) / total
+      );
+      replyRateEl.textContent = `${avg}%`;
+    }
   }
-}
 
-function getTodayCount(history) {
-  const today = new Date().toDateString();
-  return history.filter(e => new Date(e.timestamp).toDateString() === today).length;
-}
-
-function animateCount(el, target) {
-  if (!el || target === 0) return;
-  let current = 0;
-  const step = Math.max(1, Math.floor(target / 20));
-  const interval = setInterval(() => {
-    current = Math.min(current + step, target);
-    el.textContent = current;
-    if (current >= target) clearInterval(interval);
-  }, 40);
+  renderUsage(history);
 }
 
 /* ── Week Stats ──────────────────────────────────── */
 function renderWeekStats(history) {
+  // Filter to this week
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  weekStart.setHours(0,0,0,0);
+  const weekHistory = history.filter(e => {
+    const ts = e.timestamp || e.date;
+    return ts && new Date(ts) >= weekStart;
+  });
+
+  const weekEmailsEl = $('weekEmails');
+  if (weekEmailsEl) weekEmailsEl.textContent = weekHistory.length || history.length;
+
   if (!history.length) return;
 
   // Most used tone
   const toneCount = {};
-  history.forEach(e => { toneCount[e.tone] = (toneCount[e.tone] || 0) + 1; });
+  history.forEach(e => { if (e.tone) toneCount[e.tone] = (toneCount[e.tone] || 0) + 1; });
   const topTone = Object.entries(toneCount).sort((a,b) => b[1]-a[1])[0];
   const wt = $('weekTone');
   if (wt && topTone) wt.textContent = topTone[0];
 
   // Top goal
   const goalCount = {};
-  history.forEach(e => { goalCount[e.goal] = (goalCount[e.goal] || 0) + 1; });
+  history.forEach(e => { if (e.goal) goalCount[e.goal] = (goalCount[e.goal] || 0) + 1; });
   const topGoal = Object.entries(goalCount).sort((a,b) => b[1]-a[1])[0];
   const wg = $('weekGoal');
   if (wg && topGoal) wg.textContent = topGoal[0];
 
   // Avg personalization
-  const personaMap = { Quick: 1, Standard: 2, Deep: 3 };
+  const personaMap   = { Quick: 1, Standard: 2, Deep: 3 };
   const personaNames = ['—', 'Quick', 'Standard', 'Deep'];
-  const avg = Math.round(history.reduce((s, e) => s + (personaMap[e.personalization] || 1), 0) / history.length);
+  const avg = Math.round(
+    history.reduce((s, e) => s + (personaMap[e.personalization] || 1), 0) / history.length
+  );
   const wp = $('weekPersona');
   if (wp) wp.textContent = personaNames[avg] || '—';
 }
@@ -121,10 +150,13 @@ function renderWeekStats(history) {
 /* ── Tone Bars ───────────────────────────────────── */
 function renderToneBars(history) {
   const emptyMsg = $('toneEmptyMsg');
-  if (!history.length) { if (emptyMsg) emptyMsg.style.display = 'block'; return; }
+  if (!history.length) {
+    if (emptyMsg) emptyMsg.style.display = 'block';
+    return;
+  }
   if (emptyMsg) emptyMsg.style.display = 'none';
 
-  const total = history.length;
+  const total  = history.length;
   const counts = { Professional: 0, Friendly: 0, Direct: 0, Casual: 0 };
   history.forEach(e => { if (counts[e.tone] !== undefined) counts[e.tone]++; });
 
@@ -146,8 +178,8 @@ function renderToneBars(history) {
 
 /* ── Activity Feed ───────────────────────────────── */
 function renderActivity(history) {
-  const emptyEl  = $('activityEmpty');
-  const itemsEl  = $('activityItems');
+  const emptyEl = $('activityEmpty');
+  const itemsEl = $('activityItems');
   if (!emptyEl || !itemsEl) return;
 
   if (!history.length) {
@@ -159,21 +191,25 @@ function renderActivity(history) {
   emptyEl.style.display = 'none';
   itemsEl.classList.remove('hidden');
 
-  // Show last 6 emails, newest first
-  const recent = [...history].reverse().slice(0, 6);
+  const recent = [...history].slice(0, 6); // already newest-first from unshift
 
   itemsEl.innerHTML = recent.map(email => {
-    const initials = getInitials(email.prospect_name, email.prospect_company);
-    const avatarColor = getAvatarColor(email.prospect_company || email.prospect_name);
-    const timeAgo = formatTimeAgo(email.timestamp);
-    const preview = truncate(email.subject || 'Email generated', 60);
+    // Support both old field names (prospect/company) and new (prospect_name/prospect_company)
+    const name    = email.prospect_name    || email.prospect    || '';
+    const company = email.prospect_company || email.company     || '';
+    const ts      = email.timestamp        || email.date        || null;
+
+    const initials    = getInitials(name, company);
+    const avatarColor = getAvatarColor(company || name);
+    const timeAgo     = formatTimeAgo(ts);
+    const preview     = truncate(email.subject || 'Email generated', 60);
 
     return `
       <div class="activity-item">
         <div class="activity-avatar" style="background:${avatarColor}">${initials}</div>
         <div class="activity-body">
           <div class="activity-name-row">
-            <span class="activity-name">${escHtml(email.prospect_name)} · ${escHtml(email.prospect_company)}</span>
+            <span class="activity-name">${escHtml(name) || 'Unknown'} · ${escHtml(company) || '—'}</span>
             <span class="activity-time">${timeAgo}</span>
           </div>
           <p class="activity-preview">${escHtml(preview)}</p>
@@ -198,20 +234,42 @@ function renderActivity(history) {
   }).join('');
 }
 
-/* ── Activity actions ────────────────────────────── */
+/* ── Activity Actions ────────────────────────────── */
 window.copyEmail = function(id) {
   const history = loadHistory();
   const email   = history.find(e => e.id === id);
   if (!email) return;
   const text = `Subject: ${email.subject}\n\n${email.body}`;
-  navigator.clipboard.writeText(text).catch(() => {});
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied to clipboard!');
+  }).catch(() => {});
 };
 
 window.regenEmail = function(id) {
-  // Store the id to pre-fill on generate page, then navigate
   sessionStorage.setItem('smartcopy_regen', id);
   window.location.href = '/generate';
 };
+
+/* ── Toast ───────────────────────────────────────── */
+function showToast(msg) {
+  let toast = document.getElementById('dashToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'dashToast';
+    toast.style.cssText = `
+      position:fixed; bottom:24px; right:24px; z-index:9999;
+      background:#10B981; color:white; padding:10px 18px;
+      border-radius:8px; font-size:13px; font-family:Outfit,sans-serif;
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      transition: opacity 0.3s;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
 
 /* ── AI Tips ─────────────────────────────────────── */
 function renderTip(index) {
@@ -229,21 +287,31 @@ function initTips() {
       const el = $('aiTipText');
       if (el) {
         el.style.opacity = '0';
-        setTimeout(() => {
-          renderTip(currentTipIndex);
-          el.style.opacity = '1';
-        }, 200);
+        setTimeout(() => { renderTip(currentTipIndex); el.style.opacity = '1'; }, 200);
       }
     });
   }
 }
 
+/* ── Animate counter ─────────────────────────────── */
+function animateCount(el, target) {
+  if (!el) return;
+  if (target === 0) { el.textContent = '0'; return; }
+  let current = 0;
+  const step = Math.max(1, Math.floor(target / 20));
+  const interval = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current;
+    if (current >= target) clearInterval(interval);
+  }, 40);
+}
+
 /* ── Helpers ─────────────────────────────────────── */
 function getInitials(name, company) {
-  if (name) {
+  if (name && name.trim()) {
     const parts = name.trim().split(' ');
     return parts.length >= 2
-      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
       : parts[0].slice(0, 2).toUpperCase();
   }
   return company ? company.slice(0, 2).toUpperCase() : 'SC';
@@ -259,24 +327,24 @@ const AVATAR_COLORS = [
 ];
 function getAvatarColor(str) {
   let hash = 0;
-  for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < (str||'').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 function formatTimeAgo(timestamp) {
   if (!timestamp) return 'Just now';
-  const diff = Date.now() - new Date(timestamp).getTime();
+  const diff  = Date.now() - new Date(timestamp).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days  = Math.floor(diff / 86400000);
-  if (mins < 1)  return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1)   return 'Just now';
+  if (mins < 60)  return `${mins}m ago`;
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
 }
 
 function truncate(str, len) {
-  return str.length > len ? str.slice(0, len) + '…' : str;
+  return str && str.length > len ? str.slice(0, len) + '…' : (str || '');
 }
 
 function escHtml(str) {

@@ -285,15 +285,15 @@ function validateForm(data) {
 function saveToHistory(data, result) {
   const history = JSON.parse(localStorage.getItem("sc_history") || "[]");
   history.unshift({
-    id:              Date.now(),
-    date:            new Date().toISOString(),
-    prospect:        data.prospect_name,
-    company:         data.prospect_company,
-    tone:            data.tone,
-    goal:            data.goal,
-    personalization: data.personalization,
-    subject:         result.subject,
-    body:            result.body,
+    id:               Date.now(),
+    timestamp:        new Date().toISOString(),  // was 'date' — dashboard reads 'timestamp'
+    prospect_name:    data.prospect_name,         // was 'prospect'
+    prospect_company: data.prospect_company,      // was 'company'
+    tone:             data.tone,
+    goal:             data.goal,
+    personalization:  data.personalization,
+    subject:          result.subject,
+    body:             result.body,
   });
   localStorage.setItem("sc_history", JSON.stringify(history.slice(0, 50)));
 }
