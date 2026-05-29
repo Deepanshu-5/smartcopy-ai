@@ -457,60 +457,56 @@ def chrome_devtools():
 @app.route("/auth/google")
 def auth_google():
     try:
-        redirect_url = request.host_url.rstrip('/') + '/auth/callback'
         res = supabase.auth.sign_in_with_oauth({
             "provider": "google",
-            "options": {"redirect_to": redirect_url}
+            "options": {
+                "redirect_to": "http://127.0.0.1:5000/auth/callback"
+            }
         })
         return redirect(res.url)
     except Exception as e:
         print("Google auth error:", e)
         return redirect('/login?error=google_failed')
 
-
 @app.route("/auth/callback")
 def auth_callback():
-    """Handles OAuth redirect — JS reads token from URL hash and sets session."""
-    return render_template("auth_callback.html")
-
-
-@app.route("/auth/session", methods=["POST"])
-def auth_session():
-    """Called by auth_callback.html JS to establish Flask session from OAuth tokens."""
-    data          = request.get_json()
-    access_token  = data.get("access_token")
-    refresh_token = data.get("refresh_token", "")
-
-    if not access_token:
-        return jsonify({"success": False, "error": "No token provided."}), 400
+    code = request.args.get("code")
+    
+    if not code:
+        return redirect("/login?error=no_token")
 
     try:
-        res     = supabase.auth.set_session(access_token, refresh_token)
-        user    = res.user
+        res  = supabase.auth.exchange_code_for_session({"auth_code": code})
+        user = res.user
+
+        if not user:
+            return redirect("/login?error=auth_failed")
+
         profile = get_or_create_profile(str(user.id), user.email)
 
-        # Try to get name from Google metadata if no profile name
+        # Get name from Google metadata
         google_name = ""
         if hasattr(user, 'user_metadata') and user.user_metadata:
-            google_name = user.user_metadata.get("full_name", "") or \
-                          user.user_metadata.get("name", "")
+            google_name = (user.user_metadata.get("full_name") or
+                          user.user_metadata.get("name") or "")
 
         session["user_id"]    = str(user.id)
         session["user_email"] = user.email
         session["user_name"]  = (profile.get("full_name", "") if profile else "") or google_name
         session["user_plan"]  = profile.get("plan", "free") if profile else "free"
 
-        # Update profile name if empty
+        # Save Google name to profile if missing
         if profile and not profile.get("full_name") and google_name:
             supabase.table("profiles").update({
                 "full_name": google_name
             }).eq("id", str(user.id)).execute()
             session["user_name"] = google_name
 
-        return jsonify({"success": True, "redirect": "/dashboard"})
+        return redirect("/dashboard")
+
     except Exception as e:
-        print("Session error:", e)
-        return jsonify({"success": False, "error": "Authentication failed."}), 500
+        print("OAuth callback error:", e)
+        return redirect("/login?error=auth_failed")
 
 # ── Forgot Password ────────────────────────────────
 @app.route("/forgot-password", methods=["GET"])

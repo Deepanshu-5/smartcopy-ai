@@ -14,25 +14,5 @@
     <div class="spinner"></div>
     Completing sign in...
   </div>
-  <script>
-    // Read tokens from URL hash set by Supabase OAuth redirect
-    const hash   = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const access  = params.get('access_token');
-    const refresh = params.get('refresh_token');
-
-    if (access) {
-      fetch('/auth/session', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ access_token: access, refresh_token: refresh }),
-      })
-      .then(r => r.json())
-      .then(d => { window.location.href = d.success ? d.redirect : '/login?error=auth_failed'; })
-      .catch(() => { window.location.href = '/login?error=auth_failed'; });
-    } else {
-      window.location.href = '/login?error=no_token';
-    }
-  </script>
 </body>
 </html>
