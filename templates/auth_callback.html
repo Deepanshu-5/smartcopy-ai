@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SmartCopy AI — Authenticating...</title>
+  <style>
+    body { background: #F3F5FF; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Outfit', sans-serif; }
+    .msg { text-align: center; color: #374151; font-size: 15px; }
+    .spinner { width: 32px; height: 32px; border: 3px solid #E5E7EB; border-top-color: #5B5EF4; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="msg">
+    <div class="spinner"></div>
+    Completing sign in...
+  </div>
+  <script>
+    // Read tokens from URL hash set by Supabase OAuth redirect
+    const hash   = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const access  = params.get('access_token');
+    const refresh = params.get('refresh_token');
+
+    if (access) {
+      fetch('/auth/session', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ access_token: access, refresh_token: refresh }),
+      })
+      .then(r => r.json())
+      .then(d => { window.location.href = d.success ? d.redirect : '/login?error=auth_failed'; })
+      .catch(() => { window.location.href = '/login?error=auth_failed'; });
+    } else {
+      window.location.href = '/login?error=no_token';
+    }
+  </script>
+</body>
+</html>

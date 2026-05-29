@@ -301,6 +301,7 @@ function initTips() {
 /* ── Animate counter ─────────────────────────────── */
 function animateCount(el, target) {
   if (!el) return;
+  // Fix: always show 0 instead of skipping
   if (target === 0) { el.textContent = '0'; return; }
   let current = 0;
   const step = Math.max(1, Math.floor(target / 20));

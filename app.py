@@ -51,7 +51,7 @@ def get_current_user():
 def get_or_create_profile(user_id, email):
     """Fetch profile from DB, create if first login."""
     try:
-        res = supabase.table("profiles").select("*").eq("id", user_id).execute()
+        res = supabase.table("profiles").select("*").eq("id", str(user_id)).execute()
         if res.data:
             return res.data[0]
         # First login — create profile
@@ -221,7 +221,10 @@ def login():
         return render_template("login.html")
 
     # POST
-    data     = request.get_json()
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No data received."}), 400
+
     email    = data.get("email", "").strip()
     password = data.get("password", "").strip()
 
@@ -231,9 +234,9 @@ def login():
     try:
         res     = supabase.auth.sign_in_with_password({"email": email, "password": password})
         user    = res.user
-        profile = get_or_create_profile(user.id, user.email)
+        profile = get_or_create_profile(str(user.id), user.email)
 
-        session["user_id"]    = user.id
+        session["user_id"]    = str(user.id)   # ← always string
         session["user_email"] = user.email
         session["user_name"]  = profile.get("full_name", "") if profile else ""
         session["user_plan"]  = profile.get("plan", "free") if profile else "free"
@@ -242,6 +245,7 @@ def login():
 
     except Exception as e:
         err = str(e)
+        print("Login error:", err)
         if "invalid" in err.lower() or "credentials" in err.lower():
             return jsonify({"success": False, "error": "Invalid email or password."}), 401
         return jsonify({"success": False, "error": "Login failed. Please try again."}), 500
@@ -255,7 +259,10 @@ def signup():
         return render_template("signup.html")
 
     # POST
-    data     = request.get_json()
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No data received."}), 400
+
     email    = data.get("email", "").strip()
     password = data.get("password", "").strip()
     name     = data.get("name", "").strip()
@@ -274,7 +281,7 @@ def signup():
                             "error": "Account created! Check your email to confirm."}), 200
 
         supabase.table("profiles").insert({
-            "id":              user.id,
+            "id":              str(user.id),   # ← always string
             "email":           email,
             "full_name":       name,
             "plan":            "free",
@@ -282,7 +289,7 @@ def signup():
             "last_reset_date": str(date.today()),
         }).execute()
 
-        session["user_id"]    = user.id
+        session["user_id"]    = str(user.id)   # ← always string
         session["user_email"] = email
         session["user_name"]  = name
         session["user_plan"]  = "free"
@@ -296,7 +303,7 @@ def signup():
                             "error": "Email already registered. Try logging in."}), 409
         print("Signup error:", err)
         return jsonify({"success": False, "error": "Signup failed. Please try again."}), 500
-
+    
 @app.route("/logout")
 def logout():
     session.clear()
@@ -446,6 +453,89 @@ def api_usage():
 def chrome_devtools():
     return jsonify({}), 200
 
+# ── Google OAuth ───────────────────────────────────
+@app.route("/auth/google")
+def auth_google():
+    try:
+        redirect_url = request.host_url.rstrip('/') + '/auth/callback'
+        res = supabase.auth.sign_in_with_oauth({
+            "provider": "google",
+            "options": {"redirect_to": redirect_url}
+        })
+        return redirect(res.url)
+    except Exception as e:
+        print("Google auth error:", e)
+        return redirect('/login?error=google_failed')
+
+
+@app.route("/auth/callback")
+def auth_callback():
+    """Handles OAuth redirect — JS reads token from URL hash and sets session."""
+    return render_template("auth_callback.html")
+
+
+@app.route("/auth/session", methods=["POST"])
+def auth_session():
+    """Called by auth_callback.html JS to establish Flask session from OAuth tokens."""
+    data          = request.get_json()
+    access_token  = data.get("access_token")
+    refresh_token = data.get("refresh_token", "")
+
+    if not access_token:
+        return jsonify({"success": False, "error": "No token provided."}), 400
+
+    try:
+        res     = supabase.auth.set_session(access_token, refresh_token)
+        user    = res.user
+        profile = get_or_create_profile(str(user.id), user.email)
+
+        # Try to get name from Google metadata if no profile name
+        google_name = ""
+        if hasattr(user, 'user_metadata') and user.user_metadata:
+            google_name = user.user_metadata.get("full_name", "") or \
+                          user.user_metadata.get("name", "")
+
+        session["user_id"]    = str(user.id)
+        session["user_email"] = user.email
+        session["user_name"]  = (profile.get("full_name", "") if profile else "") or google_name
+        session["user_plan"]  = profile.get("plan", "free") if profile else "free"
+
+        # Update profile name if empty
+        if profile and not profile.get("full_name") and google_name:
+            supabase.table("profiles").update({
+                "full_name": google_name
+            }).eq("id", str(user.id)).execute()
+            session["user_name"] = google_name
+
+        return jsonify({"success": True, "redirect": "/dashboard"})
+    except Exception as e:
+        print("Session error:", e)
+        return jsonify({"success": False, "error": "Authentication failed."}), 500
+
+# ── Forgot Password ────────────────────────────────
+@app.route("/forgot-password", methods=["GET"])
+def forgot_password():
+    return render_template("forgot_password.html")
+
+
+@app.route("/forgot-password", methods=["POST"])
+def forgot_password_post():
+    data  = request.get_json()
+    email = data.get("email", "").strip()
+
+    if not email:
+        return jsonify({"success": False, "error": "Email is required."}), 400
+
+    try:
+        supabase.auth.reset_password_for_email(
+            email,
+            options={"redirect_to": request.host_url.rstrip('/') + '/reset-password'}
+        )
+        # Always return success — don't reveal if email exists
+        return jsonify({"success": True})
+    except Exception as e:
+        print("Forgot password error:", e)
+        return jsonify({"success": True})  # Still return success for security
 
 # Placeholder routes
 for route in ["/campaigns", "/analytics", "/templates", "/history", "/settings"]:

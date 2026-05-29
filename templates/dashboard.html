@@ -80,6 +80,10 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Log out
     </a>
+     <a href="/logout" style="display:flex;align-items:center;gap:6px;padding:8px 16px;margin:0 12px 4px;color:#9CA3AF;font-size:12px;text-decoration:none;border-radius:8px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Log out
+    </a>
     <div class="sidebar-user">
       <div class="user-av">{{ ((user.name or user.email or 'U')[0]) | upper }}</div>
       <div class="user-meta">
@@ -119,7 +123,7 @@
           <span class="eyebrow-dot"></span>
           <span id="greetingTime">Good morning</span>
         </div>
-    <h1 class="page-title">Welcome back, <span class="title-grad">{{ (user.name.split(' ')[0] if user.name else user.email.split('@')[0]) }}</span></h1>
+         <h1 class="page-title">Welcome back, <span class="title-grad">{{ (user.name.split(' ')[0] if user.name else user.email.split('@')[0]) }}</span></h1>
         <p class="page-desc">Every great deal starts with one email. Here's your outreach command centre.</p>
       </div>
       <div class="dash-welcome-right">
@@ -170,7 +174,7 @@
           </div>
           <span class="dash-stat-delta dash-stat-delta--up">+2.4%</span>
         </div>
-        <p class="dash-stat-val" id="statReplyRate">—</p>
+        <p class="dash-stat-value" id="statReplyRate">—</p>
         <p class="dash-stat-label">Avg. Reply Rate</p>
         <p class="dash-stat-sub">Exceeding industry benchmark</p>
       </div>
