@@ -40,3 +40,4 @@ logs/
 
 # requirements
 requirements.txt
+Procfile

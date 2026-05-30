@@ -534,7 +534,12 @@ def forgot_password_post():
         return jsonify({"success": True})  # Still return success for security
 
 # Placeholder routes
-for route in ["/campaigns", "/analytics", "/templates", "/history", "/settings"]:
+for route in ["/campaigns", "/analytics"]:
+    def make_redirect(r):
+        return lambda: redirect(url_for("dashboard"))
+    app.add_url_rule(route, endpoint=route.strip("/"), view_func=make_redirect(route))
+    
+for route in ["/campaigns", "/analytics"]:
     def make_redirect(r):
         return lambda: redirect(url_for("dashboard"))
     app.add_url_rule(route, endpoint=route.strip("/"), view_func=make_redirect(route))
