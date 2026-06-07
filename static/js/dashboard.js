@@ -360,10 +360,14 @@ function escHtml(str) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// Sidebar controls moved to static/js/sidebar.js (centralized)
+
 /* ── Boot ────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
   setDateAndGreeting();
   initTips();
+  initSidebarToggle();
+  initSidebarUserClick();
 
   // Fetch both in parallel
   const [history, usageData] = await Promise.all([fetchHistory(), fetchUsage()]);

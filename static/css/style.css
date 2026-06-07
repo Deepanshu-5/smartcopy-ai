@@ -77,6 +77,9 @@
 
   --font-ui:   'Outfit', system-ui, sans-serif;
   --font-mono: 'Fira Code', monospace;
+  
+  /* Sidebar collapsed state */
+  --sidebar-collapsed: 0;
 }
 
 /* ── Reset ─────────────────────────────────────────── */
@@ -111,16 +114,9 @@ input, textarea { font-family: inherit; }
   border-right: 1px solid var(--c-s-border);
   z-index: 50;
   overflow-y: auto;
-}
-
-.sidebar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 140% 100px at 50% 0%, rgba(91,94,244,0.13) 0%, transparent 70%),
-    radial-gradient(ellipse 80% 80px at 50% 100%, rgba(139,92,246,0.07) 0%, transparent 70%);
-  pointer-events: none;
+  overflow-x: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .brand {
@@ -128,6 +124,12 @@ input, textarea { font-family: inherit; }
   align-items: center;
   gap: 18px;
   padding: 36px 28px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.brand:hover {
+  opacity: 0.8;
 }
 .brand-icon {
   width: 56px; height: 56px;
@@ -280,6 +282,12 @@ input, textarea { font-family: inherit; }
   gap: 14px;
   padding: 16px 20px;
   border-top: 1px solid var(--c-s-border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-user:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 .user-av {
   width: 42px; height: 42px;
@@ -306,6 +314,165 @@ input, textarea { font-family: inherit; }
   font-size: 13px;
   color: var(--c-s-t3);
   margin-top: 2px;
+}
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR COLLAPSED STATE — ICONS ONLY
+══════════════════════════════════════════════════════ */
+.sidebar.collapsed {
+  width: 80px;
+  min-width: 80px;
+  overflow-x: hidden;
+}
+
+/* Hide text but keep icons */
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .brand-tagline,
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-chip,
+.sidebar.collapsed .upgrade-card,
+.sidebar.collapsed .sidebar-user .user-meta {
+  display: none !important;
+}
+
+.sidebar.collapsed .brand {
+  padding: 28px 12px 16px;
+  justify-content: center;
+}
+.sidebar.collapsed .brand-icon {
+  width: 44px;
+  height: 44px;
+}
+.sidebar.collapsed .nav {
+  padding: 0 6px;
+}
+.sidebar.collapsed .nav-item {
+  padding: 14px;
+  justify-content: center;
+  gap: 0;
+}
+.sidebar.collapsed .nav-ico {
+  width: 22px;
+  height: 22px;
+}
+.sidebar.collapsed .sidebar-user {
+  padding: 14px 10px;
+  justify-content: center;
+}
+.sidebar.collapsed .user-av {
+  width: 36px;
+  height: 36px;
+}
+/* Tooltip on hover */
+.sidebar.collapsed .nav-item {
+  position: relative;
+}
+.sidebar.collapsed .nav-item:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 70px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e2040;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: var(--sh-md);
+}
+
+/* Logout link */
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  margin: 0 8px 4px;
+  color: #9CA3AF;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+.sidebar-logout:hover {
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+}
+.sidebar-logout .nav-ico {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.sidebar.collapsed .sidebar-logout {
+  justify-content: center;
+  padding: 14px;
+  margin: 0 6px 4px;
+}
+.sidebar.collapsed .sidebar-logout .nav-text {
+  display: none;
+}
+
+
+
+/* Collapsed sidebar state — REMOVED DUPLICATE RULES */
+
+/* ── Sidebar Toggle Button ── */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 24px;
+  /* place the toggle slightly outside the sidebar for discoverability */
+  right: -16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--c-s-t2);
+  border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+  z-index: 120;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--c-s-t1);
+  border-color: rgba(255,255,255,0.20);
+}
+
+.sidebar-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
+.sidebar.collapsed .sidebar-toggle-btn {
+  transform: rotate(180deg);
+}
+/* Collapsed sidebar — hide text labels from nav items */
+.sidebar.collapsed .nav-item {
+  gap: 0;
+  padding: 14px;
+  justify-content: center;
+}
+.sidebar.collapsed .nav-chip { display: none; }
+.sidebar.collapsed .nav-item span:not(.nav-ico) { display: none; }
+
+/* Main content adjusts when sidebar collapses */
+.sidebar.collapsed ~ .main {
+     
+  /* handled by JS adding margin */
 }
 
 /* ══════════════════════════════════════════════════════

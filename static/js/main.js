@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────
 
 const API_URL = "/generate";
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
 // ── Output state ───────────────────────────
 let currentOutput = {
@@ -49,6 +50,8 @@ const regenBtn       = document.getElementById("regenBtn");
 const copyToast      = document.getElementById("copyToast");
 const emailsToday    = document.getElementById("emailsToday");
 
+// Sidebar controls moved to static/js/sidebar.js (centralized)
+
 // ── Init ───────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
   setupExperiencePills();
@@ -62,9 +65,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupCopyBtn();
   setupRegenBtn();
   setupTopbarBtns();
+  initSidebarToggle();
+  initSidebarUserClick();
 
   // Load real usage from server
   await fetchAndUpdateUsage();
+
+  // ── Load template from sessionStorage if redirected from templates page ──
+  const savedTemplate = sessionStorage.getItem('sc_template');
+  if (savedTemplate) {
+    try {
+      const t = JSON.parse(savedTemplate);
+      sessionStorage.removeItem('sc_template');
+
+      if (t.offering) {
+        const el = document.getElementById('serviceOffered');
+        if (el) { el.value = t.offering; el.dispatchEvent(new Event('input')); }
+      }
+      if (t.tone) {
+        document.querySelectorAll('#toneGroup .pill').forEach(p => p.classList.remove('active'));
+        document.querySelector(`#toneGroup .pill[data-val="${t.tone}"]`)?.classList.add('active');
+      }
+      if (t.goal) {
+        document.querySelectorAll('#goalGroup .goal-pill').forEach(p => p.classList.remove('active'));
+        document.querySelector(`#goalGroup .goal-pill[data-val="${t.goal}"]`)?.classList.add('active');
+      }
+      if (t.personalization) {
+        document.querySelectorAll('.p-level').forEach(p => p.classList.remove('active'));
+        document.querySelector(`.p-level[data-val="${t.personalization}"]`)?.classList.add('active');
+      }
+      if (t.experience) {
+        document.querySelectorAll('#expGroup .pill').forEach(p => p.classList.remove('active'));
+        document.querySelector(`#expGroup .pill[data-val="${t.experience}"]`)?.classList.add('active');
+      }
+    } catch {}
+  }
 });
 
 // ── Fetch usage from server ────────────────
@@ -317,7 +352,7 @@ function setupGenerateBtn() {
     try {
       const res    = await fetch(API_URL, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
         body:    JSON.stringify(data),
       });
       const result = await res.json();

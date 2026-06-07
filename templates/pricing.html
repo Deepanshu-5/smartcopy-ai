@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}SmartCopy AI — Pricing{% endblock %}
+{% block head %}
+  <style>
+    .pricing-hero { text-align: center; padding: 48px 0 40px; }
+    .pricing-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 20px; background: var(--c-accent-s); border: 1px solid rgba(91,94,244,0.2); font-size: 13px; font-weight: 700; color: var(--c-accent); margin-bottom: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .pricing-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-accent); animation: pulse-dot 2s infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(1.3);} }
+    .pricing-title { font-size: 52px; font-weight: 800; color: var(--c-t1); letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 16px; }
+    .pricing-title span { background: var(--c-accent-g); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .pricing-sub { font-size: 18px; color: var(--c-t3); max-width: 540px; margin: 0 auto 48px; line-height: 1.7; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1100px; margin: 0 auto; align-items: start; padding-bottom: 64px; }
+    .pricing-card { background: var(--c-card); border: 2px solid var(--c-border2); border-radius: 24px; padding: 32px 28px; display: flex; flex-direction: column; gap: 0; transition: transform 0.2s, box-shadow 0.2s; }
+    .pricing-card:hover { transform: translateY(-4px); box-shadow: var(--sh-md); }
+    .pricing-card--pro { border-color: var(--c-accent); position: relative; transform: scale(1.03); box-shadow: 0 8px 32px rgba(91,94,244,0.18); }
+    .pricing-popular-badge { position: absolute; top: 16px; right: 16px; font-size: 11px; font-weight: 800; color: var(--c-accent); background: var(--c-accent-s); border: 1px solid rgba(91,94,244,0.2); padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .plan-name { font-size: 20px; font-weight: 800; color: var(--c-t1); margin-bottom: 8px; }
+    .plan-desc { font-size: 14px; color: var(--c-t3); line-height: 1.6; margin-bottom: 28px; }
+    .plan-price { display: flex; align-items: baseline; gap: 4px; margin-bottom: 28px; }
+    .plan-price-amount { font-size: 52px; font-weight: 800; color: var(--c-t1); letter-spacing: -0.03em; line-height: 1; }
+    .plan-price-period { font-size: 16px; color: var(--c-t3); font-weight: 500; }
+    .plan-btn { width: 100%; padding: 13px; border-radius: var(--r-md); font-size: 15px; font-weight: 700; font-family: var(--font-ui); cursor: pointer; transition: all 0.2s; margin-bottom: 28px; border: 2px solid var(--c-border); color: var(--c-t2); background: var(--c-card); }
+    .plan-btn--primary { background: var(--c-accent-g); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(91,94,244,0.35); }
+    .plan-features { display: flex; flex-direction: column; gap: 12px; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-status"><span class="status-dot"></span>AI Engine Active</div>
+      </div>
+      <div class="topbar-right">
+        <button class="tb-btn tb-btn--accent" onclick="window.location.href='/generate'">New Email</button>
+      </div>
+    </header>
+
+    <div class="pricing-hero">
+      <div class="pricing-badge"><div class="pricing-badge-dot"></div>Pricing & Plans</div>
+      <h1 class="pricing-title">Choose your<br><span>AI power level</span></h1>
+      <p class="pricing-sub">From freelancers to high-growth agencies — find the plan that fits your outreach goals and scale effortlessly.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="plan-name">Basic</div>
+        <div class="plan-desc">Perfect for individuals getting started with AI cold outreach.</div>
+        <div class="plan-price"><span class="plan-price-amount">$0</span><span class="plan-price-period">/ month</span></div>
+        <button class="plan-btn">Current Plan</button>
+        <div class="plan-features">
+          <div class="plan-feature">5 AI emails per day</div>
+          <div class="plan-feature">Cold email + Follow-up + LinkedIn DM</div>
+          <div class="plan-feature">Template library access</div>
+          <div class="plan-feature">Full email history</div>
+        </div>
+      </div>
+      <div class="pricing-card pricing-card--pro">
+        <div class="pricing-popular-badge">Most Popular</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-desc">Scale your outreach 10x with advanced AI personalization.</div>
+        <div class="plan-price"><span class="plan-price-amount">$29</span><span class="plan-price-period">/ month</span></div>
+        <button class="plan-btn plan-btn--primary" onclick="alert('Stripe payments coming soon!')">Get Started</button>
+        <div class="plan-features">
+          <div class="plan-feature"><strong>Unlimited</strong> AI emails per day</div>
+          <div class="plan-feature">Deep personalization mode</div>
+          <div class="plan-feature">Advanced follow-up sequences</div>
+          <div class="plan-feature">Priority AI engine</div>
+          <div class="plan-feature">Save custom templates</div>
+        </div>
+      </div>
+      <div class="pricing-card">
+        <div class="plan-name">Premium</div>
+        <div class="plan-desc">For enterprise teams requiring custom workflows at scale.</div>
+        <div class="plan-price"><span class="plan-price-amount">$99</span><span class="plan-price-period">/ month</span></div>
+        <button class="plan-btn plan-btn--dark" onclick="alert('Contact us at hello@smartcopyai.com')">Contact Sales</button>
+        <div class="plan-features">
+          <div class="plan-feature">Dedicated AI researcher</div>
+          <div class="plan-feature">API access</div>
+          <div class="plan-feature">Custom branding</div>
+          <div class="plan-feature">Bulk generation</div>
+          <div class="plan-feature">CRM integration</div>
+        </div>
+      </div>
+    </div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      initSidebarToggle && initSidebarToggle();
+      initSidebarUserClick && initSidebarUserClick();
+    });
+  </script>
+{% endblock %}

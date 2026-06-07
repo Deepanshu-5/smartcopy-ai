@@ -3,341 +3,236 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartCopy AI — History</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>SmartCopy AI — Settings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
   <style>
-    /* ── History page specific ── */
-    .history-header {
-      padding: 36px 0 24px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 20px;
+    .settings-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 24px;
+      padding: 32px 0 64px;
     }
-    .history-filters {
+
+    /* ── Settings sidebar nav ── */
+    .settings-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .snav-item {
       display: flex;
       align-items: center;
       gap: 10px;
-      flex-wrap: wrap;
+      padding: 10px 14px;
+      border-radius: var(--r-md);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--c-t2);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
     }
-    .search-wrap {
-      position: relative;
+    .snav-item:hover { background: var(--c-accent-s); color: var(--c-accent); }
+    .snav-item.active { background: var(--c-accent-s); color: var(--c-accent); font-weight: 700; }
+    .snav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── Settings sections ── */
+    .settings-section {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
     }
-    .search-wrap svg {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
+    .settings-section.active { display: flex; }
+
+    .settings-card {
+      background: var(--c-card);
+      border: 1.5px solid var(--c-border2);
+      border-radius: var(--r-lg);
+      padding: 24px;
+    }
+    .settings-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--c-t1);
+      margin-bottom: 4px;
+    }
+    .settings-card-sub {
+      font-size: 13px;
       color: var(--c-t3);
-      pointer-events: none;
+      margin-bottom: 20px;
     }
-    .search-input {
-      padding: 9px 14px 9px 36px;
+    .settings-card--danger { border-color: rgba(239,68,68,0.2); }
+    .settings-card--danger .settings-card-title { color: var(--c-red); }
+
+    /* ── Form fields ── */
+    .sfield { margin-bottom: 16px; }
+    .sfield:last-of-type { margin-bottom: 0; }
+    .sfield-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--c-t2);
+      margin-bottom: 6px;
+    }
+    .sfield-input {
+      width: 100%;
+      padding: 10px 14px;
       border: 1.5px solid var(--c-border);
       border-radius: var(--r-md);
       font-size: 14px;
       font-family: var(--font-ui);
       color: var(--c-t1);
-      background: var(--c-card);
+      background: var(--c-workspace);
       outline: none;
-      width: 220px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .search-input:focus {
+    .sfield-input:focus {
       border-color: var(--c-accent);
       box-shadow: var(--sh-focus);
-    }
-    .filter-select {
-      padding: 9px 14px;
-      border: 1.5px solid var(--c-border);
-      border-radius: var(--r-md);
-      font-size: 14px;
-      font-family: var(--font-ui);
-      color: var(--c-t2);
       background: var(--c-card);
-      outline: none;
-      cursor: pointer;
-      transition: border-color 0.2s;
     }
-    .filter-select:focus { border-color: var(--c-accent); }
-
-    /* ── Email cards ── */
-    .history-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
+    .sfield-input:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
-    .email-card {
-      background: var(--c-card);
-      border: 1.5px solid var(--c-border2);
-      border-radius: var(--r-lg);
-      padding: 20px 24px;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      cursor: pointer;
-    }
-    .email-card:hover {
-      border-color: var(--c-accent);
-      box-shadow: var(--sh-sm);
-    }
-    .email-card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 10px;
-    }
-    .email-card-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-    .email-avatar {
-      width: 40px; height: 40px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700; color: #fff;
-      flex-shrink: 0;
-    }
-    .email-card-info { flex: 1; min-width: 0; }
-    .email-card-prospect {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--c-t1);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .email-card-subject {
-      font-size: 13px;
-      color: var(--c-t3);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-top: 2px;
-    }
-    .email-card-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .email-card-time {
+    .sfield-hint {
       font-size: 12px;
       color: var(--c-t4);
+      margin-top: 4px;
     }
-    .email-card-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .card-action-btn {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 6px 12px;
-      border: 1.5px solid var(--c-border);
-      border-radius: var(--r-sm);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--c-t2);
-      background: var(--c-card);
-      cursor: pointer;
+
+    /* ── Save buttons ── */
+    .save-btn {
+      padding: 10px 24px;
+      background: var(--c-accent-g);
+      color: #fff;
+      border: none;
+      border-radius: var(--r-md);
+      font-size: 14px;
+      font-weight: 700;
       font-family: var(--font-ui);
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+      margin-top: 16px;
+    }
+    .save-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .danger-btn {
+      padding: 10px 24px;
+      background: var(--c-red-s);
+      color: var(--c-red);
+      border: 1.5px solid rgba(239,68,68,0.25);
+      border-radius: var(--r-md);
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--font-ui);
+      cursor: pointer;
       transition: all 0.2s;
+      margin-top: 16px;
     }
-    .card-action-btn:hover {
-      border-color: var(--c-accent);
-      color: var(--c-accent);
-      background: var(--c-accent-s);
+    .danger-btn:hover { background: var(--c-red); color: #fff; }
+
+    /* ── Success / error messages ── */
+    .smsg {
+      padding: 10px 14px;
+      border-radius: var(--r-md);
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+      animation: fadeUp 0.3s ease;
     }
-    .email-card-tags {
+    .smsg--success { background: var(--c-green-s); border: 1px solid rgba(16,185,129,0.2); color: var(--c-green); }
+    .smsg--error   { background: var(--c-red-s);   border: 1px solid rgba(239,68,68,0.2);  color: var(--c-red); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+    /* ── Plan card ── */
+    .plan-card {
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--c-accent-s);
+      border: 1.5px solid rgba(91,94,244,0.18);
+      border-radius: var(--r-md);
+      margin-bottom: 16px;
     }
-    .etag {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 9px;
+    .plan-badge {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--c-accent);
+      background: rgba(91,94,244,0.12);
+      padding: 4px 12px;
       border-radius: 20px;
     }
-    .etag--tone { background: var(--c-accent-s); color: var(--c-accent); }
-    .etag--goal { background: var(--c-green-s); color: var(--c-green); }
-    .etag--persona { background: var(--c-amber-s); color: var(--c-amber); }
-
-    /* ── Expanded email body ── */
-    .email-card-body {
-      display: none;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1.5px solid var(--c-border2);
-    }
-    .email-card-body.open { display: block; }
-    .email-body-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--c-t3);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 8px;
-      display: block;
-    }
-    .email-body-pre {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      color: var(--c-t2);
-      line-height: 1.8;
-      white-space: pre-wrap;
-      background: var(--c-workspace);
-      border: 1.5px solid var(--c-border2);
-      border-radius: var(--r-md);
-      padding: 14px 16px;
-      max-height: 260px;
-      overflow-y: auto;
-    }
-
-    /* ── Empty state ── */
-    .history-empty {
-      text-align: center;
-      padding: 80px 20px;
-      color: var(--c-t3);
-    }
-    .history-empty-icon {
-      width: 56px; height: 56px;
-      border-radius: var(--r-lg);
-      background: var(--c-accent-s);
-      display: flex; align-items: center; justify-content: center;
-      color: var(--c-accent);
-      margin: 0 auto 16px;
-    }
-    .history-empty h3 { font-size: 18px; font-weight: 700; color: var(--c-t2); margin-bottom: 8px; }
-    .history-empty p  { font-size: 14px; color: var(--c-t3); margin-bottom: 20px; }
-    .history-empty-btn {
-      display: inline-flex; align-items: center; gap: 6px;
+    .plan-name { font-size: 15px; font-weight: 700; color: var(--c-t1); }
+    .plan-desc { font-size: 13px; color: var(--c-t3); margin-top: 2px; }
+    .upgrade-plan-btn {
       padding: 10px 20px;
       background: var(--c-accent-g);
       color: #fff;
+      border: none;
       border-radius: var(--r-md);
-      font-size: 14px; font-weight: 600;
+      font-size: 13px;
+      font-weight: 700;
       font-family: var(--font-ui);
-      text-decoration: none;
+      cursor: pointer;
       transition: opacity 0.2s;
+      white-space: nowrap;
     }
-    .history-empty-btn:hover { opacity: 0.88; }
+    .upgrade-plan-btn:hover { opacity: 0.88; }
 
-    /* ── Loading ── */
-    .history-loading {
+    /* ── Usage progress ── */
+    .usage-progress {
+      margin-top: 8px;
+    }
+    .usage-progress-bar {
+      height: 6px;
+      background: var(--c-border2);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .usage-progress-fill {
+      height: 100%;
+      background: var(--c-accent-g);
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── Profile avatar ── */
+    .profile-avatar-row {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 60px;
-      color: var(--c-t3);
-      font-size: 15px;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1.5px solid var(--c-border2);
     }
-    .loading-spinner {
-      width: 20px; height: 20px;
-      border: 2.5px solid var(--c-border);
-      border-top-color: var(--c-accent);
+    .profile-av-big {
+      width: 56px; height: 56px;
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      background: var(--c-accent-g);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .profile-av-info p { font-size: 13px; color: var(--c-t3); margin-top: 2px; }
 
-    /* ── Stats row ── */
-    .history-stats {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
+    @media (max-width: 900px) {
+      .settings-layout { grid-template-columns: 1fr; }
+      .settings-nav { flex-direction: row; flex-wrap: wrap; }
     }
-    .hstat {
-      flex: 1;
-      background: var(--c-card);
-      border: 1.5px solid var(--c-border2);
-      border-radius: var(--r-md);
-      padding: 16px 18px;
-      text-align: center;
-    }
-    .hstat-val { font-size: 24px; font-weight: 800; color: var(--c-t1); display: block; }
-    .hstat-lbl { font-size: 12px; color: var(--c-t3); margin-top: 2px; display: block; }
   </style>
 </head>
 <body>
 
   <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#lg1)" stroke="url(#lg1)" stroke-width="1" stroke-linejoin="round"/>
-          <defs>
-            <linearGradient id="lg1" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#818CF8"/><stop offset="1" stop-color="#C084FC"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <div class="brand-text">
-        <span class="brand-name">SmartCopy</span>
-        <span class="brand-tag">AI</span>
-      </div>
-    </div>
-    <div class="brand-tagline">Outreach OS</div>
-    <nav class="nav">
-      <span class="nav-label">Workspace</span>
-      <ul class="nav-list">
-        <li class="nav-item" onclick="window.location.href='/generate'">
-          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/></svg>
-          Generate
-        </li>
-        <li class="nav-item" onclick="window.location.href='/dashboard'">
-          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-          Dashboard
-        </li>
-        <li class="nav-item" onclick="window.location.href='/campaigns'">
-          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Campaigns
-        </li>
-        <li class="nav-item" onclick="window.location.href='/analytics'">
-          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Analytics
-        </li>
-      </ul>
-      <span class="nav-label" style="margin-top:8px;">Library</span>
-      <ul class="nav-list">
-        <li class="nav-item" onclick="window.location.href='/templates'">
-          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Templates
-        </li>
-        <li class="nav-item active" onclick="window.location.href='/history'">
-          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
-          History
-          <span class="nav-chip">Active</span>
-        </li>
-        <li class="nav-item" onclick="window.location.href='/settings'">
-          <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-          Settings
-        </li>
-      </ul>
-    </nav>
-    <div class="upgrade-card">
-      <div class="upgrade-icon">⚡</div>
-      <p class="upgrade-title">Go Pro</p>
-      <p class="upgrade-body">Unlimited emails, deep AI research & team workspace.</p>
-      <button class="upgrade-btn">Upgrade · $29/mo</button>
-    </div>
-    <a href="/logout" style="display:flex;align-items:center;gap:6px;padding:8px 16px;margin:0 12px 4px;color:#9CA3AF;font-size:12px;text-decoration:none;border-radius:8px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Log out
-    </a>
-    <div class="sidebar-user">
-      <div class="user-av">{{ ((user.name or user.email or 'U')[0]) | upper }}</div>
-      <div class="user-meta">
-        <span class="user-name">{{ user.name or user.email or 'Your Account' }}</span>
-        <span class="user-plan">Free · {{ daily_limit - usage }} left today</span>
-      </div>
-    </div>
-  </aside>
+  {% include '_sidebar.html' %}
 
   <!-- ═══════════════════ MAIN ═══════════════════ -->
   <main class="main">
@@ -356,293 +251,280 @@
       </div>
     </header>
 
-    <!-- Page header -->
-    <div class="history-header">
+    <div style="padding:32px 0 0;">
+      <div class="page-eyebrow"><span class="eyebrow-dot"></span>Settings</div>
+      <h1 class="page-title" style="font-size:32px;margin-bottom:24px;">Account Settings</h1>
+    </div>
+
+    <div class="settings-layout">
+
+      <!-- Settings nav -->
+      <div class="settings-nav">
+        <a class="snav-item active" onclick="showSection('profile', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+        <a class="snav-item" onclick="showSection('security', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Security
+        </a>
+        <a class="snav-item" onclick="showSection('plan', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/></svg>
+          Plan & Usage
+        </a>
+        <a class="snav-item" onclick="showSection('danger', this)" style="color:var(--c-red);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Danger Zone
+        </a>
+      </div>
+
+      <!-- Settings content -->
       <div>
-        <div class="page-eyebrow">
-          <span class="eyebrow-dot"></span>
-          Email History
-        </div>
-        <h1 class="page-title" style="font-size:32px;">All Generated Emails</h1>
-        <p class="page-desc">Browse, search and copy your past outreach emails.</p>
-      </div>
-      <div class="history-filters">
-        <div class="search-wrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" type="text" id="searchInput" placeholder="Search emails..." />
-        </div>
-        <select class="filter-select" id="toneFilter">
-          <option value="">All Tones</option>
-          <option>Professional</option>
-          <option>Friendly</option>
-          <option>Direct</option>
-          <option>Casual</option>
-        </select>
-        <select class="filter-select" id="goalFilter">
-          <option value="">All Goals</option>
-          <option>Book a Call</option>
-          <option>Get a Reply</option>
-          <option>Demo Request</option>
-          <option>Share Resource</option>
-        </select>
-      </div>
-    </div>
 
-    <!-- Stats row -->
-    <div class="history-stats" id="historyStats" style="display:none;">
-      <div class="hstat">
-        <span class="hstat-val" id="hstatTotal">0</span>
-        <span class="hstat-lbl">Total Emails</span>
-      </div>
-      <div class="hstat">
-        <span class="hstat-val" id="hstatThisWeek">0</span>
-        <span class="hstat-lbl">This Week</span>
-      </div>
-      <div class="hstat">
-        <span class="hstat-val" id="hstatTopTone">—</span>
-        <span class="hstat-lbl">Most Used Tone</span>
-      </div>
-      <div class="hstat">
-        <span class="hstat-val" id="hstatTopGoal">—</span>
-        <span class="hstat-lbl">Top Goal</span>
-      </div>
-    </div>
+        <!-- Profile -->
+        <div class="settings-section active" id="section-profile">
+          <div class="settings-card">
+            <div class="settings-card-title">Profile Information</div>
+            <div class="settings-card-sub">Update your display name.</div>
 
-    <!-- Loading -->
-    <div class="history-loading" id="historyLoading">
-      <div class="loading-spinner"></div>
-      Loading your emails...
-    </div>
-
-    <!-- Empty state -->
-    <div class="history-empty" id="historyEmpty" style="display:none;">
-      <div class="history-empty-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
-      </div>
-      <h3>No emails yet</h3>
-      <p>Generate your first cold email to see it here.</p>
-      <a href="/generate" class="history-empty-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/></svg>
-        Generate First Email
-      </a>
-    </div>
-
-    <!-- No results -->
-    <div class="history-empty" id="noResults" style="display:none;">
-      <div class="history-empty-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </div>
-      <h3>No results found</h3>
-      <p>Try a different search or filter.</p>
-    </div>
-
-    <!-- Email list -->
-    <div class="history-grid" id="historyGrid"></div>
-
-  </main>
-
-  <script>
-    const AVATAR_COLORS = [
-      'linear-gradient(135deg,#5B5EF4,#8B5CF6)',
-      'linear-gradient(135deg,#0EA5E9,#38BDF8)',
-      'linear-gradient(135deg,#10B981,#34D399)',
-      'linear-gradient(135deg,#F59E0B,#FBBF24)',
-      'linear-gradient(135deg,#EF4444,#F87171)',
-      'linear-gradient(135deg,#8B5CF6,#C084FC)',
-    ];
-
-    function avatarColor(str) {
-      let h = 0;
-      for (let i = 0; i < (str||'').length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-      return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-    }
-
-    function initials(name, company) {
-      if (name && name.trim()) {
-        const p = name.trim().split(' ');
-        return p.length >= 2 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : p[0].slice(0,2).toUpperCase();
-      }
-      return (company||'SC').slice(0,2).toUpperCase();
-    }
-
-    function timeAgo(ts) {
-      if (!ts) return '';
-      const d = Date.now() - new Date(ts).getTime();
-      const m = Math.floor(d/60000), h = Math.floor(d/3600000), dy = Math.floor(d/86400000);
-      if (m < 1) return 'Just now';
-      if (m < 60) return `${m}m ago`;
-      if (h < 24) return `${h}h ago`;
-      if (dy < 7) return `${dy}d ago`;
-      return new Date(ts).toLocaleDateString('en-GB', {day:'numeric',month:'short'});
-    }
-
-    function escHtml(s) {
-      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    let allEmails = [];
-
-    async function loadHistory() {
-      try {
-        const res  = await fetch('/api/history');
-        const data = await res.json();
-        allEmails  = data.success ? (data.emails || []) : [];
-        renderStats(allEmails);
-        renderList(allEmails);
-      } catch {
-        document.getElementById('historyLoading').style.display = 'none';
-        document.getElementById('historyEmpty').style.display   = 'block';
-      }
-    }
-
-    function renderStats(emails) {
-      if (!emails.length) return;
-      document.getElementById('historyStats').style.display = 'flex';
-
-      document.getElementById('hstatTotal').textContent = emails.length;
-
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - 7);
-      const thisWeek = emails.filter(e => new Date(e.created_at) >= weekStart).length;
-      document.getElementById('hstatThisWeek').textContent = thisWeek;
-
-      const tc = {};
-      emails.forEach(e => { tc[e.tone] = (tc[e.tone]||0)+1; });
-      const topT = Object.entries(tc).sort((a,b)=>b[1]-a[1])[0];
-      document.getElementById('hstatTopTone').textContent = topT ? topT[0] : '—';
-
-      const gc = {};
-      emails.forEach(e => { gc[e.goal] = (gc[e.goal]||0)+1; });
-      const topG = Object.entries(gc).sort((a,b)=>b[1]-a[1])[0];
-      document.getElementById('hstatTopGoal').textContent = topG ? topG[0].split(' ')[0] : '—';
-    }
-
-    function renderList(emails) {
-      document.getElementById('historyLoading').style.display = 'none';
-      const grid    = document.getElementById('historyGrid');
-      const empty   = document.getElementById('historyEmpty');
-      const noRes   = document.getElementById('noResults');
-
-      if (allEmails.length === 0) {
-        empty.style.display = 'block';
-        grid.innerHTML = '';
-        return;
-      }
-
-      if (emails.length === 0) {
-        noRes.style.display = 'block';
-        grid.innerHTML = '';
-        return;
-      }
-
-      noRes.style.display  = 'none';
-      empty.style.display  = 'none';
-
-      grid.innerHTML = emails.map(email => {
-        const name    = email.prospect_name    || '';
-        const company = email.prospect_company || '';
-        const color   = avatarColor(company || name);
-        const ini     = initials(name, company);
-        const time    = timeAgo(email.created_at);
-
-        return `
-          <div class="email-card" onclick="toggleCard(${email.id}, event)">
-            <div class="email-card-top">
-              <div class="email-card-left">
-                <div class="email-avatar" style="background:${color}">${ini}</div>
-                <div class="email-card-info">
-                  <div class="email-card-prospect">${escHtml(name)} · ${escHtml(company)}</div>
-                  <div class="email-card-subject">${escHtml(email.subject || 'No subject')}</div>
-                </div>
-              </div>
-              <div class="email-card-meta">
-                <span class="email-card-time">${time}</span>
-                <div class="email-card-actions" onclick="event.stopPropagation()">
-                  <button class="card-action-btn" onclick="copyEmail(${email.id})">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                    Copy
-                  </button>
-                  <button class="card-action-btn" onclick="useAsTemplate(${email.id})">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-                    Regen
-                  </button>
-                </div>
+            <div class="profile-avatar-row">
+              <div class="profile-av-big" id="profileAvatar">{{ ((user.name or user.email or 'U')[0]) | upper }}</div>
+              <div class="profile-av-info">
+                <strong style="font-size:15px;color:var(--c-t1);">{{ user.name or 'Your Account' }}</strong>
+                <p>{{ user.email }}</p>
               </div>
             </div>
-            <div class="email-card-tags">
-              <span class="etag etag--tone">${escHtml(email.tone||'')}</span>
-              <span class="etag etag--goal">${escHtml(email.goal||'')}</span>
-              ${email.personalization ? `<span class="etag etag--persona">${escHtml(email.personalization)}</span>` : ''}
+
+            <div class="sfield">
+              <label class="sfield-label" for="settingName">Display Name</label>
+              <input class="sfield-input" type="text" id="settingName" value="{{ user.name or '' }}" placeholder="Your full name" />
             </div>
-            <div class="email-card-body" id="body-${email.id}">
-              <span class="email-body-label">Subject</span>
-              <p style="font-size:14px;font-weight:600;color:var(--c-t1);margin-bottom:12px;">${escHtml(email.subject||'')}</p>
-              <span class="email-body-label">Email Body</span>
-              <pre class="email-body-pre">${escHtml(email.body||'')}</pre>
+            <div class="sfield">
+              <label class="sfield-label">Email Address</label>
+              <input class="sfield-input" type="email" value="{{ user.email }}" disabled />
+              <p class="sfield-hint">Email cannot be changed here.</p>
+            </div>
+
+            <button class="save-btn" id="saveProfileBtn" onclick="saveProfile()">Save Changes</button>
+            <div class="smsg smsg--success" id="profileSuccess"></div>
+            <div class="smsg smsg--error"   id="profileError"></div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="settings-section" id="section-security">
+          <div class="settings-card">
+            <div class="settings-card-title">Change Password</div>
+            <div class="settings-card-sub">Choose a strong password with at least 8 characters, uppercase letter, and number.</div>
+
+            <div class="sfield">
+              <label class="sfield-label" for="newPassword">New Password</label>
+              <input class="sfield-input" type="password" id="newPassword" placeholder="••••••••" />
+            </div>
+            <div class="sfield">
+              <label class="sfield-label" for="confirmPassword">Confirm New Password</label>
+              <input class="sfield-input" type="password" id="confirmPassword" placeholder="••••••••" />
+            </div>
+
+            <button class="save-btn" onclick="changePassword()">Update Password</button>
+            <div class="smsg smsg--success" id="pwSuccess">✓ Password updated successfully.</div>
+            <div class="smsg smsg--error"   id="pwError"></div>
+          </div>
+        </div>
+
+        <!-- Plan & Usage -->
+        <div class="settings-section" id="section-plan">
+          <div class="settings-card">
+            <div class="settings-card-title">Current Plan</div>
+            <div class="settings-card-sub">Your subscription and daily usage.</div>
+
+            <div class="plan-card">
+              <div>
+                <div class="plan-name">Free Plan</div>
+                <div class="plan-desc">5 emails per day · Basic personalization</div>
+              </div>
+              <span class="plan-badge">FREE</span>
+            </div>
+
+            <div class="usage-progress">
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--c-t2);">
+                <span>Daily usage</span>
+                <span><strong>{{ usage }}</strong> / {{ daily_limit }} emails</span>
+              </div>
+              <div class="usage-progress-bar">
+                <div class="usage-progress-fill" style="width:{{ [(usage / daily_limit * 100), 100]|min }}%"></div>
+              </div>
+            </div>
+
+            <button class="upgrade-plan-btn" style="margin-top:20px;width:100%;padding:12px;" onclick="alert('Stripe payments coming in Phase 8!')">
+              ⚡ Upgrade to Pro — $29/mo
+            </button>
+
+            <div style="margin-top:16px;">
+              <p style="font-size:13px;font-weight:700;color:var(--c-t2);margin-bottom:10px;">Pro includes:</p>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                {% for feature in ['Unlimited emails per day', 'Deep AI personalization', 'Full email history', 'Priority support', 'Custom templates'] %}
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--c-t2);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B5EF4" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  {{ feature }}
+                </div>
+                {% endfor %}
+              </div>
             </div>
           </div>
-        `;
-      }).join('');
+        </div>
+
+        <!-- Danger zone -->
+        <div class="settings-section" id="section-danger">
+          <div class="settings-card settings-card--danger">
+            <div class="settings-card-title">Sign Out</div>
+            <div class="settings-card-sub">Sign out of your account on this device.</div>
+            <button class="danger-btn" onclick="window.location.href='/logout'">Sign Out</button>
+          </div>
+          <div class="settings-card settings-card--danger">
+            <div class="settings-card-title">Delete Account</div>
+            <div class="settings-card-sub">Permanently delete your account and all data. This cannot be undone.</div>
+            <button class="danger-btn" onclick="confirmDelete()">Delete My Account</button>
+            <div class="smsg smsg--error" id="deleteError"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+
+  <script>
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    // ── Section switching ──
+    function showSection(name, el) {
+      document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.snav-item').forEach(s => s.classList.remove('active'));
+      document.getElementById(`section-${name}`).classList.add('active');
+      if (el) el.classList.add('active');
     }
 
-    function toggleCard(id, e) {
-      if (e.target.closest('.email-card-actions')) return;
-      const body = document.getElementById(`body-${id}`);
-      if (body) body.classList.toggle('open');
+    function showMsg(id, msg, type) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent   = msg;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 4000);
     }
 
-    function copyEmail(id) {
-      const email = allEmails.find(e => e.id === id);
-      if (!email) return;
-      navigator.clipboard.writeText(`Subject: ${email.subject}\n\n${email.body}`)
-        .then(() => showToast('Copied to clipboard!'))
-        .catch(() => {});
-    }
+    // ── Save profile ──
+    async function saveProfile() {
+      const name = document.getElementById('settingName').value.trim();
+      if (!name) { showMsg('profileError', 'Name is required.'); return; }
 
-    function useAsTemplate(id) {
-      sessionStorage.setItem('smartcopy_regen', id);
-      window.location.href = '/generate';
-    }
+      const btn = document.getElementById('saveProfileBtn');
+      btn.disabled    = true;
+      btn.textContent = 'Saving…';
 
-    function showToast(msg) {
-      let t = document.getElementById('hToast');
-      if (!t) {
-        t = document.createElement('div');
-        t.id = 'hToast';
-        t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:#10B981;color:white;padding:10px 18px;border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:opacity 0.3s;';
-        document.body.appendChild(t);
+      try {
+        const res  = await fetch('/api/profile', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+          body:    JSON.stringify({ name }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showMsg('profileSuccess', '✓ Profile updated successfully.', 'success');
+          // Update avatar letter
+          const av = document.getElementById('profileAvatar');
+          if (av) av.textContent = name[0].toUpperCase();
+        } else {
+          showMsg('profileError', data.error || 'Update failed.');
+        }
+      } catch {
+        showMsg('profileError', 'Something went wrong.');
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Save Changes';
       }
-      t.textContent = msg;
-      t.style.opacity = '1';
-      clearTimeout(t._t);
-      t._t = setTimeout(() => { t.style.opacity = '0'; }, 2500);
     }
 
-    // ── Filters ──
-    function applyFilters() {
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const tone   = document.getElementById('toneFilter').value;
-      const goal   = document.getElementById('goalFilter').value;
+    // ── Change password ──
+    async function changePassword() {
+      const pw1 = document.getElementById('newPassword').value.trim();
+      const pw2 = document.getElementById('confirmPassword').value.trim();
 
-      const filtered = allEmails.filter(e => {
-        const matchSearch = !search ||
-          (e.prospect_name||'').toLowerCase().includes(search) ||
-          (e.prospect_company||'').toLowerCase().includes(search) ||
-          (e.subject||'').toLowerCase().includes(search);
-        const matchTone = !tone || e.tone === tone;
-        const matchGoal = !goal || e.goal === goal;
-        return matchSearch && matchTone && matchGoal;
+      if (!pw1 || !pw2)   { showMsg('pwError', 'Please fill in both fields.'); return; }
+      if (pw1 !== pw2)    { showMsg('pwError', 'Passwords do not match.'); return; }
+      if (pw1.length < 8) { showMsg('pwError', 'Password must be at least 8 characters.'); return; }
+      if (!/[A-Z]/.test(pw1) || !/[0-9]/.test(pw1)) {
+        showMsg('pwError', 'Password must contain uppercase letter and number.');
+        return;
+      }
+
+      try {
+        const res  = await fetch('/api/change-password', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+          body:    JSON.stringify({ password: pw1 }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showMsg('pwSuccess', '✓ Password updated successfully.', 'success');
+          document.getElementById('newPassword').value     = '';
+          document.getElementById('confirmPassword').value = '';
+        } else {
+          showMsg('pwError', data.error || 'Password change failed.');
+        }
+      } catch {
+        showMsg('pwError', 'Something went wrong.');
+      }
+    }
+
+    // ── Delete account ──
+    function confirmDelete() {
+      if (confirm('Are you absolutely sure? This will permanently delete your account and all your emails. This cannot be undone.')) {
+        showMsg('deleteError', 'Account deletion coming soon. Please contact support.', 'error');
+      }
+    }
+
+    // ── Handle URL hash for direct section links ──
+  if (window.location.hash === '#upgrade') {
+  showSection('plan', document.querySelectorAll('.snav-item')[2]);
+}
+
+    // ── Sidebar Toggle ──
+    function initSidebarToggle() {
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('sidebarToggleBtn');
+      
+      if (!sidebar || !toggleBtn) return;
+      
+      // Load saved state from localStorage
+      const isCollapsed = localStorage.getItem('smartcopy-sidebar-collapsed') === 'true';
+      if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+      }
+      
+      // Toggle on button click
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebar.classList.toggle('collapsed');
+        const collapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('smartcopy-sidebar-collapsed', collapsed);
       });
-
-      renderList(filtered);
     }
 
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
-    document.getElementById('toneFilter').addEventListener('change', applyFilters);
-    document.getElementById('goalFilter').addEventListener('change', applyFilters);
-
-    // Boot
-    loadHistory();
+    // ── Sidebar User Profile Click ──
+    function initSidebarUserClick() {
+      const sidebarUser = document.querySelector('.sidebar-user');
+      if (sidebarUser) {
+        sidebarUser.addEventListener('click', () => {
+          window.location.href = '/dashboard';
+        });
+      }
+    }
+    
+    initSidebarToggle();
+    initSidebarUserClick();
   </script>
 </body>
 </html>

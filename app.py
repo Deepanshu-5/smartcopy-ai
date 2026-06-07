@@ -1,5 +1,6 @@
 import os
 import json
+import secrets
 from datetime import date
 from functools import wraps
 from flask import (Flask, render_template, request, jsonify,
@@ -8,10 +9,44 @@ from dotenv import load_dotenv
 from groq import Groq
 from supabase import create_client, Client
 
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+except ImportError:
+    Limiter = None
+    get_remote_address = None
+
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
+# Use provided secret key in production; generate ephemeral key for local dev if missing
+secret = os.environ.get("FLASK_SECRET_KEY")
+if not secret:
+    # generate a temporary secret for local development
+    secret = os.urandom(24)
+    print("Warning: FLASK_SECRET_KEY not set — using ephemeral secret for dev only.")
+app.secret_key = secret
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
+    MAX_CONTENT_LENGTH=32 * 1024,
+)
+
+if Limiter:
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        default_limits=["300 per day", "80 per hour"],
+        storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+    )
+else:
+    class _NoopLimiter:
+        def limit(self, *_args, **_kwargs):
+            def decorator(fn):
+                return fn
+            return decorator
+    limiter = _NoopLimiter()
 
 # ── Clients ────────────────────────────────────────
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -23,6 +58,45 @@ supabase: Client = create_client(
 )
 
 DAILY_LIMIT = 5
+
+def get_csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": get_csrf_token}
+
+
+@app.before_request
+def validate_csrf_token():
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return None
+
+    expected = session.get("_csrf_token")
+    supplied = request.headers.get("X-CSRFToken") or request.form.get("_csrf_token")
+
+    if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+        return jsonify({"success": False, "error": "Security token expired. Refresh and try again."}), 400
+
+    return None
+
+# ── Security Headers ──────────────────────────────
+@app.after_request
+def set_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(_error):
+    return jsonify({"success": False, "error": "Too many requests. Please wait and try again."}), 429
 
 # ─────────────────────────────────────────
 #  AUTH HELPERS
@@ -56,8 +130,9 @@ def get_or_create_profile(user_id, email):
             return res.data[0]
         # First login — create profile
         new_profile = {
-            "id":               user_id,
+            "id":               str(user_id),
             "email":            email,
+            "full_name":        "",  # Empty initially, user can update in settings
             "plan":             "free",
             "emails_today":     0,
             "last_reset_date":  str(date.today()),
@@ -111,27 +186,11 @@ def increment_usage(user_id):
 #  PROMPT ENGINEERING SYSTEM
 # ─────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are an elite cold email copywriter with 10+ years of experience writing 
-emails that actually get replies. You write like a real human — confident, warm, and specific. 
-
-RULES YOU NEVER BREAK:
-- Never use "I hope this email finds you well" or any variation
-- Never use "I wanted to reach out" — just reach out
-- Never use "synergy", "leverage", "game-changer", "revolutionary", "cutting-edge"
-- Never open with "My name is..." — the prospect can see that
-- No fluff, no filler sentences
-- Keep subject lines under 9 words — curiosity-driven, not clickbait
-- First line must hook immediately — reference something real or ask a sharp question
-- CTA must be ONE clear ask, not multiple options
-- Sound like a smart human wrote this at 11am on a Tuesday, not a bot
-
-OUTPUT FORMAT: You must return ONLY valid JSON, no markdown, no explanation. 
-Exactly this structure:
-{
-  "cold_email": { "subject": "...", "body": "..." },
-  "follow_up":  { "subject": "...", "body": "..." },
-  "linkedin_dm": { "body": "..." }
-}"""
+SYSTEM_PROMPT = """You are a professional cold-email copywriter. Write concise, human-sounding
+emails that get replies. Rules: no generic openings ("I hope this finds you well"), avoid
+marketing buzzwords (synergy, leverage, game-changer), do not open with the sender's name,
+no fluff. Subject lines < 9 words. First line must hook. Single clear CTA. Return ONLY valid JSON
+with this structure: {"cold_email":{"subject":"...","body":"..."},"follow_up":{"subject":"...","body":"..."},"linkedin_dm":{"body":"..."}}"""
 
 
 def build_personalization_context(data):
@@ -214,6 +273,7 @@ Generate all three now. Return ONLY the JSON object.
 #  AUTH ROUTES
 # ─────────────────────────────────────────
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if request.method == "GET":
         if "user_id" in session:
@@ -252,6 +312,7 @@ def login():
 
 
 @app.route("/signup", methods=["GET", "POST"])
+@limiter.limit("6 per minute", methods=["POST"])
 def signup():
     if request.method == "GET":
         if "user_id" in session:
@@ -269,8 +330,14 @@ def signup():
 
     if not email or not password:
         return jsonify({"success": False, "error": "Email and password required."}), 400
-    if len(password) < 6:
-        return jsonify({"success": False, "error": "Password must be at least 6 characters."}), 400
+    if len(password) < 8:
+        return jsonify({"success": False, "error": "Password must be at least 8 characters."}), 400
+    if not any(c.isupper() for c in password) or not any(c.isdigit() for c in password):
+        return jsonify({"success": False, "error": "Password must contain uppercase letter and number."}), 400
+    if len(email) > 254:
+        return jsonify({"success": False, "error": "Email too long."}), 400
+    if len(name) > 100:
+        return jsonify({"success": False, "error": "Name too long."}), 400
 
     try:
         res  = supabase.auth.sign_up({"email": email, "password": password})
@@ -303,7 +370,7 @@ def signup():
                             "error": "Email already registered. Try logging in."}), 409
         print("Signup error:", err)
         return jsonify({"success": False, "error": "Signup failed. Please try again."}), 500
-    
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -341,6 +408,7 @@ def generate_page():
 
 @app.route("/generate", methods=["POST"])
 @login_required
+@limiter.limit("8 per minute")
 def generate():
     try:
         user    = get_current_user()
@@ -360,6 +428,12 @@ def generate():
         if missing:
             return jsonify({"success": False,
                             "error": f"Missing: {', '.join(missing)}"}), 400
+        
+        # Validate input lengths to prevent abuse
+        for field in required:
+            val = data.get(field, "").strip()
+            if len(val) > 500:
+                return jsonify({"success": False, "error": f"{field} too long."}), 400
 
         completion = groq_client.chat.completions.create(
             model=MODEL,
@@ -367,8 +441,8 @@ def generate():
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user",   "content": build_user_prompt(data)},
             ],
-            temperature=0.75,
-            max_tokens=1200,
+            temperature=0.6,
+            max_tokens=800,
             top_p=0.9,
         )
 
@@ -379,6 +453,14 @@ def generate():
                 raw = raw[4:]
         raw    = raw.strip()
         result = json.loads(raw)
+        
+        # Validate response structure
+        if not isinstance(result, dict):
+            raise ValueError("Invalid response format")
+        if not result.get("cold_email") or not result.get("follow_up") or not result.get("linkedin_dm"):
+            raise ValueError("Missing required email sections")
+        if not result["cold_email"].get("subject") or not result["cold_email"].get("body"):
+            raise ValueError("Invalid cold email structure")
 
         # Save to Supabase
         supabase.table("emails").insert({
@@ -455,12 +537,14 @@ def chrome_devtools():
 
 # ── Google OAuth ───────────────────────────────────
 @app.route("/auth/google")
+@limiter.limit("20 per minute")
 def auth_google():
     try:
+        redirect_url = os.environ.get("OAUTH_REDIRECT_URL", "http://127.0.0.1:5000/auth/callback")
         res = supabase.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
-                "redirect_to": "http://127.0.0.1:5000/auth/callback"
+                "redirect_to": redirect_url
             }
         })
         return redirect(res.url)
@@ -469,6 +553,7 @@ def auth_google():
         return redirect('/login?error=google_failed')
 
 @app.route("/auth/callback")
+@limiter.limit("20 per minute")
 def auth_callback():
     code = request.args.get("code")
     
@@ -509,14 +594,16 @@ def auth_callback():
         return redirect("/login?error=auth_failed")
 
 # ── Forgot Password ────────────────────────────────
-@app.route("/forgot-password", methods=["GET"])
+@app.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def forgot_password():
-    return render_template("forgot_password.html")
+    if request.method == "GET":
+        return render_template("forgot_password.html")
 
-
-@app.route("/forgot-password", methods=["POST"])
-def forgot_password_post():
+    # POST
     data  = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "Email is required."}), 400
     email = data.get("email", "").strip()
 
     if not email:
@@ -533,17 +620,120 @@ def forgot_password_post():
         print("Forgot password error:", e)
         return jsonify({"success": True})  # Still return success for security
 
-# Placeholder routes
-for route in ["/campaigns", "/analytics"]:
-    def make_redirect(r):
-        return lambda: redirect(url_for("dashboard"))
-    app.add_url_rule(route, endpoint=route.strip("/"), view_func=make_redirect(route))
-    
-for route in ["/campaigns", "/analytics"]:
-    def make_redirect(r):
-        return lambda: redirect(url_for("dashboard"))
-    app.add_url_rule(route, endpoint=route.strip("/"), view_func=make_redirect(route))
 
+@app.route("/reset-password", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
+def reset_password():
+    if request.method == "GET":
+        code = request.args.get("code")
+        if code:
+            try:
+                res = supabase.auth.exchange_code_for_session({"auth_code": code})
+                session_obj = getattr(res, "session", None)
+                if session_obj:
+                    session["reset_access_token"] = getattr(session_obj, "access_token", "")
+                    session["reset_refresh_token"] = getattr(session_obj, "refresh_token", "")
+            except Exception as e:
+                print("Password reset session error:", e)
+                return render_template("reset_password.html", reset_ready=False)
+        return render_template("reset_password.html", reset_ready=bool(session.get("reset_access_token")))
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No data received."}), 400
+
+    new_password = data.get("password", "").strip()
+    if len(new_password) < 8:
+        return jsonify({"success": False, "error": "Password must be at least 8 characters."}), 400
+    if not any(c.isupper() for c in new_password) or not any(c.isdigit() for c in new_password):
+        return jsonify({"success": False, "error": "Password must contain uppercase letter and number."}), 400
+
+    access_token = session.get("reset_access_token")
+    refresh_token = session.get("reset_refresh_token")
+    if not access_token or not refresh_token:
+        return jsonify({"success": False, "error": "Reset link expired. Request a new link."}), 400
+
+    try:
+        supabase.auth.set_session(access_token, refresh_token)
+        supabase.auth.update_user({"password": new_password})
+        session.pop("reset_access_token", None)
+        session.pop("reset_refresh_token", None)
+        return jsonify({"success": True, "redirect": "/login"})
+    except Exception as e:
+        print("Password reset error:", e)
+        return jsonify({"success": False, "error": "Password reset failed. Request a new link."}), 500
+
+# Placeholder routes
+@app.route("/history")
+@login_required
+def history():
+    user  = get_current_user()
+    usage = get_usage_today(user["id"])
+    return render_template("history.html", user=user, usage=usage, daily_limit=DAILY_LIMIT)
+
+
+@app.route("/templates")
+@login_required
+def templates():
+    user  = get_current_user()
+    usage = get_usage_today(user["id"])
+    return render_template("templates.html", user=user, usage=usage, daily_limit=DAILY_LIMIT)
+
+
+@app.route("/settings")
+@login_required
+def settings():
+    user  = get_current_user()
+    usage = get_usage_today(user["id"])
+    return render_template("settings.html", user=user, usage=usage, daily_limit=DAILY_LIMIT)
+
+
+@app.route("/api/profile", methods=["POST"])
+@login_required
+@limiter.limit("12 per minute")
+def update_profile():
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No data received."}), 400
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"success": False, "error": "Name is required."}), 400
+    try:
+        supabase.table("profiles").update({
+            "full_name": name
+        }).eq("id", session["user_id"]).execute()
+        session["user_name"] = name
+        return jsonify({"success": True})
+    except Exception as e:
+        print("Profile update error:", e)
+        return jsonify({"success": False, "error": "Update failed."}), 500
+
+
+@app.route("/api/change-password", methods=["POST"])
+@login_required
+@limiter.limit("5 per minute")
+def change_password():
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "No data received."}), 400
+    new_password = data.get("password", "").strip()
+    if len(new_password) < 8:
+        return jsonify({"success": False, "error": "Password must be at least 8 characters."}), 400
+    if not any(c.isupper() for c in new_password) or not any(c.isdigit() for c in new_password):
+        return jsonify({"success": False, "error": "Password must contain uppercase letter and number."}), 400
+    try:
+        supabase.auth.update_user({"password": new_password})
+        return jsonify({"success": True})
+    except Exception as e:
+        print("Password change error:", e)
+        return jsonify({"success": False, "error": "Password change failed."}), 500
+    
+@app.route("/pricing")
+@login_required
+def pricing():
+    user  = get_current_user()
+    usage = get_usage_today(user["id"])
+    return render_template("pricing.html", user=user, usage=usage, daily_limit=DAILY_LIMIT)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -642,3 +642,23 @@
   .usage-bar-card { flex-wrap: wrap; }
   .dash-welcome { flex-direction: column; align-items: flex-start; }
 }
+/* Activity item hover actions */
+.activity-item {
+  position: relative;
+}
+.activity-actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.activity-item:hover .activity-actions {
+  opacity: 1;
+}
+
+/* Stat card hover lift */
+.dash-stat-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.dash-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-md);
+}

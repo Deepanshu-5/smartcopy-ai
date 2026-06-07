@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>SmartCopy AI — Sign Up</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -182,6 +183,51 @@
       body { padding: 16px; align-items: flex-start; padding-top: 32px; }
       .auth-card { padding: 24px 20px; }
     }
+    /* Glassmorphism upgrade */
+body {
+  background: #0d051f;
+  background-image:
+    radial-gradient(circle at 80% 20%, rgba(91,94,244,0.4) 0%, transparent 40%),
+    radial-gradient(circle at 10% 80%, rgba(138,43,226,0.3) 0%, transparent 50%);
+}
+.auth-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+}
+.auth-title { color: #ffffff; }
+.auth-sub   { color: rgba(255,255,255,0.6); }
+.auth-label { color: rgba(255,255,255,0.75); }
+.auth-input {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.15);
+  color: #ffffff;
+}
+.auth-input::placeholder { color: rgba(255,255,255,0.3); }
+.auth-input:focus {
+  background: rgba(255,255,255,0.1);
+  border-color: #5B5EF4;
+  box-shadow: 0 0 0 3px rgba(91,94,244,0.25);
+}
+.forgot-link { color: rgba(255,255,255,0.6); }
+.forgot-link:hover { color: #fff; }
+.auth-brand-name { color: #ffffff; }
+.auth-brand-tag  { background: rgba(91,94,244,0.3); color: #c0c1ff; }
+.auth-divider    { color: rgba(255,255,255,0.3); }
+.auth-divider::before, .auth-divider::after { background: rgba(255,255,255,0.15); }
+.auth-footer     { color: rgba(255,255,255,0.5); }
+.auth-footer a   { color: #c0c1ff; }
+.toggle-pw       { color: rgba(255,255,255,0.4); }
+.toggle-pw:hover { color: #fff; }
+
+/* Floating animation on card */
+@keyframes floatIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.auth-wrap { animation: floatIn 0.5s ease both; }
   </style>
 </head>
 <body>
@@ -228,7 +274,7 @@
         <input class="auth-input" type="email" id="email" placeholder="you@example.com" autocomplete="email" />
       </div>
       <div class="auth-field">
-        <label class="auth-label" for="password">Password <span style="color:#9CA3AF;font-weight:400;font-size:12px">(min 6 chars)</span></label>
+        <label class="auth-label" for="password">Password <span style="color:#9CA3AF;font-weight:400;font-size:12px">(8+ chars, uppercase + number)</span></label>
         <div class="password-wrap">
           <input class="auth-input" type="password" id="password" placeholder="••••••••" autocomplete="new-password" />
           <button class="toggle-pw" id="togglePw" type="button" aria-label="Toggle password">
@@ -274,6 +320,7 @@
     const togglePw  = document.getElementById('togglePw');
     const eyeShow   = document.getElementById('eyeShow');
     const eyeHide   = document.getElementById('eyeHide');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     togglePw.addEventListener('click', () => {
       const isHidden = pwInput.type === 'password';
@@ -299,7 +346,11 @@
       const password = pwInput.value.trim();
 
       if (!name || !email || !password) { showError('Please fill in all fields.'); return; }
-      if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
+      if (password.length < 8) { showError('Password must be at least 8 characters.'); return; }
+      if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+        showError('Password must contain uppercase letter and number.');
+        return;
+      }
 
       signupBtn.disabled    = true;
       signupBtn.textContent = 'Creating account…';
@@ -308,7 +359,7 @@
       try {
         const res  = await fetch('/signup', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
           body: JSON.stringify({ name, email, password }),
         });
         const data = await res.json();
